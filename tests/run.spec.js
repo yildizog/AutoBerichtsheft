@@ -5,8 +5,8 @@ dotenv.config();
 
 test('test', async ({ page }) => {
 
-  const username = process.env.USERNAME;
-  const password = process.env.PASS;
+  const username = process.env.BENUTZERNAME;
+  const password = process.env.PASSWORT;
 
   await page.goto('https://webuntis.com/#/basic/login');
   await page.getByText('Search for School Name, City or Address').click();
