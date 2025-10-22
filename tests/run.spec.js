@@ -5,8 +5,10 @@ dotenv.config();
 
 test('test', async ({ page }) => {
 
-  const username = process.env.BENUTZERNAME;
-  const password = process.env.PASSWORT;
+  const units = process.env.UNITSUSER;
+  const unitspass = process.env.UNITSPASS;
+  const ihk = process.env.IHKUSER;
+  const ihkpass = process.env.IHKPASS;
 
   await page.goto('https://webuntis.com/#/basic/login');
   await page.getByText('Search for School Name, City or Address').click();
@@ -14,9 +16,9 @@ test('test', async ({ page }) => {
   await page.getByRole('combobox').press('Enter');
   await page.goto('https://niobe.webuntis.com/WebUntis/?school=le-bk-muenster#/basic/login');
   await page.getByRole('textbox', { name: 'Benutzername' }).click();
-  await page.getByRole('textbox', { name: 'Benutzername' }).fill(username);
+  await page.getByRole('textbox', { name: 'Benutzername' }).fill(units);
   await page.getByRole('textbox', { name: 'Passwort' }).click();
-  await page.getByRole('textbox', { name: 'Passwort' }).fill(password);
+  await page.getByRole('textbox', { name: 'Passwort' }).fill(unitspass);
   await page.getByRole('button', { name: 'Login' }).click();
   await page.getByRole('link', { name: 'Mein Stundenplan' }).click();
   await page.getByTestId('date-picker-with-arrows-previous').click();
@@ -47,7 +49,7 @@ test('test', async ({ page }) => {
   console.log("\n")
   console.log("\n")
   console.log("Freitag:")
-  await page.locator('div').filter({ hasText: /^N127$/ }).first().click();
+  await page.locator('div').filter({ hasText: /^GID$/ }).first().click();
   const GID = await locator.inputValue();
   console.log("Gestaltung IT Dienstleistungen:\n", GID);
   console.log("\n")
@@ -61,4 +63,15 @@ test('test', async ({ page }) => {
   const EVP2 = await locator.inputValue();
   console.log("Entwicklung Vernetzter Prozesse:\n", EVP2);
   await page.getByRole('button', { name: 'Close' }).click();
+  await page.goto('https://www.bildung-ihk-nordwestfalen.de/tibrosBB/BB_auszubildende.jsp');
+  await page.getByRole('textbox', { name: 'Azubinummer' }).click();
+  await page.getByRole('textbox', { name: 'Azubinummer' }).fill(ihk);
+  await page.getByRole('textbox', { name: 'Passwort' }).click();
+  await page.getByRole('textbox', { name: 'Passwort' }).fill(ihkpass);
+  await page.getByRole('button', { name: 'Login' }).click();
+  await page.getByRole('link', { name: 'Ausbildungsnachweise', exact: true }).click();
+  await page.getByRole('button', { name: 'Neuer Eintrag' }).first().click();
+  await page.locator('textarea[name="ausbinhalt3"]').click();
+  await page.locator('textarea[name="ausbinhalt3"]').fill(inhalt);
+  await page.getByRole('button', { name: 'Speichern', exact: true }).click();
 });
