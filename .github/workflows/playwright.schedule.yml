@@ -18,8 +18,8 @@ jobs:
     env:
       TEST_URL: https://ihre-tolle-seite.netlify.app/
       # 🚨 NEU: Laden der GitHub Secrets in die Umgebung des Runners
-      BENUTZERNAME: ${{ secrets.BENUTZERNAME }}
-      PASSWORT: ${{ secrets.PASSWORT }}
+      USERNAME: ${{ secrets.BENUTZERNAME }}
+      PASS: ${{ secrets.PASSWORT }}
 
     steps:
       - name: Checkout Code
