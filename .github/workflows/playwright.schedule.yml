@@ -16,7 +16,10 @@ jobs:
     
     # 🚨 WICHTIG: Ersetzen Sie die URL durch Ihre Netlify- oder Host-URL 🚨
     env:
-      TEST_URL: https://ihre-tolle-seite.netlify.app/ 
+      TEST_URL: https://ihre-tolle-seite.netlify.app/
+      # 🚨 NEU: Laden der GitHub Secrets in die Umgebung des Runners
+      USERNAME: ${{ secrets.USERNAME }}
+      PASSWORD: ${{ secrets.PASSWORD }}
 
     steps:
       - name: Checkout Code
