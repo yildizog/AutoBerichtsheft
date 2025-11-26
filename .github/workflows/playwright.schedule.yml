@@ -2,8 +2,7 @@ name: Scheduled Playwright E2E Test
 
 on:
   # 1. CRON-JOB: Führt den Test automatisch nach Zeitplan aus
-  # Die Zeit ist in UTC (Coordinated Universal Time). 
-  # Beispiel: '30 8 * * *' = Täglich um 08:30 Uhr UTC
+  # Läuft jeden Dienstag um 09:00 Uhr UTC.
   schedule:
     - cron: '0 9 * * 2'
   
@@ -14,12 +13,13 @@ jobs:
   e2e-test:
     runs-on: ubuntu-latest
     
-    # 🚨 WICHTIG: Ersetzen Sie die URL durch Ihre Netlify- oder Host-URL 🚨
     env:
-      TEST_URL: https://ihre-tolle-seite.netlify.app/
-      # 🚨 NEU: Laden der GitHub Secrets in die Umgebung des Runners
-      USERNAME: ${{ secrets.BENUTZERNAME }}
-      PASS: ${{ secrets.PASSWORT }}
+      UNITSUSER: ${{ secrets.UNITSUSER }}
+      UNITSPASS: ${{ secrets.UNITSPASS }}
+      IHKUSER: ${{ secrets.IHKUSER }}
+      IHKPASS: ${{ secrets.IHKPASS }}
+      AUSBILDERMAIL: ${{ secrets.AUSBILDERMAIL }}
+      ABTEILUNG: ${{ secrets.ABTEILUNG }}
 
     steps:
       - name: Checkout Code
@@ -37,7 +37,8 @@ jobs:
         run: npx playwright install --with-deps
 
       - name: Run Playwright Tests (Zeitgesteuert)
-        # Nutzt die TEST_URL aus der 'env:' Sektion oben
+        # Playwright oder Ihr Test-Runner greift nun direkt auf die Variablen zu, 
+        # z.B. über process.env.UNITSUSER in Node.js/JavaScript
         run: npx playwright test
         
       - name: Upload Test Report (Optional)
