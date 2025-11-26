@@ -37,8 +37,6 @@ jobs:
         run: npx playwright install --with-deps
 
       - name: Run Playwright Tests (Zeitgesteuert)
-        # Playwright oder Ihr Test-Runner greift nun direkt auf die Variablen zu, 
-        # z.B. über process.env.UNITSUSER in Node.js/JavaScript
         run: npx playwright test
         
       - name: Upload Test Report (Optional)

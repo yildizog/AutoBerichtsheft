@@ -48,7 +48,7 @@ test('test', async ({ page }) => {
     const STDM_val = await locator.inputValue();
     await page.getByRole('button', { name: 'Close' }).click();
 
-    await page.locator('div').filter({ hasText: /^C26$/ }).nth(3).click();
+    await page.locator('div').filter({ hasText: /^D-KRYPT$/ }).nth(3).click();
     const Kryp_val = await locator.inputValue();
     await page.getByRole('button', { name: 'Close' }).click();
 
