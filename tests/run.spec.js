@@ -12,7 +12,7 @@ test('test', async ({ page }) => {
     const ausbildermail = process.env.AUSBILDERMAIL || '';
     const abteilung = process.env.ABTEILUNG || '';
     
-    // HINWEIS: Wir verwenden 'let' für die Werte, da sie neu zugewiesen werden.
+    // Deklaration der Variablen mit 'let', da sie neu zugewiesen werden
     let EVP_val = '';
     let DE_val = '';
     let STDM_val = '';
@@ -37,12 +37,16 @@ test('test', async ({ page }) => {
     await page.getByTestId('date-picker-with-arrows-previous').click(); 
     await page.getByRole('link', { name: 'Mein Stundenplan' }).click(); 
 
+    // **STABILITÄTSFIX FÜR ACTIONS:** Warte explizit, bis die Stundenplan-Karten geladen sind.
+    // Timeout auf 45s gesetzt, falls die GitHub Actions VM langsam ist.
+    await page.getByTestId('lesson-card-row').first().waitFor({ state: 'visible', timeout: 45000 }); 
+    
+    
     // M O N T A G -----------------------------------------------------------------
     
     // EVP (3. Zeile im Stundenplan)
     await page.getByTestId('lesson-card-row').nth(2).click();
     try {
-        // Setzt Timeout für diese Aktion auf 10 Sekunden (10000ms)
         EVP_val = await page.locator('textarea.ant-input').inputValue({ timeout: 10000 });
         if (!EVP_val.trim()) {
             EVP_val = 'KEIN INHALT BEI FACH EVP';
@@ -53,8 +57,7 @@ test('test', async ({ page }) => {
     }
     await page.getByRole('button', { name: 'Close' }).click();
 
-    // DEUTSCH (D)
-    // Korrektur: Exakter Locator
+    // DEUTSCH (D) - Jetzt mit exaktem Locator
     await page.getByText('D', { exact: true }).click(); 
     try {
         DE_val = await page.locator('textarea.ant-input').inputValue({ timeout: 10000 });
@@ -109,8 +112,7 @@ test('test', async ({ page }) => {
     }
     await page.getByRole('button', { name: 'Close' }).click();
 
-    // ENGLISCH (E)
-    // Korrektur: Exakter Locator
+    // ENGLISCH (E) - Jetzt mit exaktem Locator
     await page.getByText('E', { exact: true }).click();
     try {
         EN_val = await page.locator('textarea.ant-input').inputValue({ timeout: 10000 });
