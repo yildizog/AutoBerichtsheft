@@ -6,12 +6,15 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "devDependencies": {
     "@playwright/test": "^1.56.0",
     "@types/node": "^24.7.2"
   },
   "dependencies": {
     "dotenv": "^17.2.3"
-  }
+  },
+  "directories": {
+    "test": "tests"
+  },
+  "description": ""
 }
