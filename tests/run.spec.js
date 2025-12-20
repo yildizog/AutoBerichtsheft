@@ -95,7 +95,7 @@ test('Berichtsheft Automatisierung', async ({ page }) => {
 
         // --- Stundenplan ---
         // Warte bis Dashboard geladen ist
-        await page.waitForURL(/.*dashboard.*/, { timeout: 30000 });
+        await page.waitForURL(/.*today.*/, { timeout: 30000 });
         console.log("Dashboard geladen.");
 
         await page.getByRole('link', { name: 'Mein Stundenplan' }).click();
