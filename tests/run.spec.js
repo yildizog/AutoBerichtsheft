@@ -4,6 +4,13 @@ import * as nodemailer from 'nodemailer';
 
 dotenv.config();
 
+test.use({
+    viewport: { width: 1920, height: 1080 }, // Full HD simulieren
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36', // Als echter Chrome tarnen
+    locale: 'de-DE', // Deutsch erzwingen
+    timezoneId: 'Europe/Berlin' // Deutsche Zeit erzwingen
+});
+
 // Konfiguration des E-Mail-Transporters (Globale Konfiguration)
 const transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
