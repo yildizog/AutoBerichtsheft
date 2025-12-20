@@ -6,15 +6,15 @@ dotenv.config();
 
 // --- BROWSER KONFIGURATION ---
 test.use({
-    viewport: { width: 1920, height: 1080 }, // Großer Bildschirm
+    viewport: { width: 1920, height: 1080 },
     locale: 'de-DE',
     timezoneId: 'Europe/Berlin',
-    video: 'on-first-retry', // Video aufnehmen bei Fehler
+    video: 'on-first-retry',
 });
 
 // E-Mail Transporter
 const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || 'smtp.gmail.com', // Fallback, falls Variable fehlt
+    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.EMAIL_PORT || '465'),
     secure: true, 
     auth: {
@@ -24,8 +24,11 @@ const transporter = nodemailer.createTransport({
 });
 
 test('Berichtsheft Automatisierung', async ({ page }) => {
-    // 1. ZEITLIMIT ERHÖHEN (WICHTIG!)
-    test.setTimeout(120 * 1000); // 2 Minuten Zeit geben
+    // -----------------------------------------------------------
+    // WICHTIG: Zeitlimit auf 5 Minuten (300 Sekunden) setzen!
+    // Dein letzter Fehler war "120000ms exceeded" (2 Minuten).
+    // -----------------------------------------------------------
+    test.setTimeout(300 * 1000); 
 
     const unitsuser = process.env.UNITSUSER || ''; 
     const unitspass = process.env.UNITSPASS || '';
@@ -44,12 +47,10 @@ test('Berichtsheft Automatisierung', async ({ page }) => {
     // Hilfsfunktion: Fenster sicher schließen
     async function safeClose() {
         try {
-            // Versuche Close Button zu finden
             const closeBtn = page.getByRole('button', { name: 'Close' });
             if (await closeBtn.isVisible({ timeout: 2000 })) {
                 await closeBtn.click();
             } else {
-                // Fallback: Manchmal heißt der Button "Schließen" oder ist ein X icon
                 await page.keyboard.press('Escape');
             }
         } catch (e) {
@@ -60,114 +61,104 @@ test('Berichtsheft Automatisierung', async ({ page }) => {
     try {
         console.log("--- Start: WebUntis Login ---");
         
-        // --- LOGIN FIX FÜR GITHUB ACTIONS ---
-        await page.goto('https://webuntis.com/#/basic/login');
+        // --- DIREKTER LOGIN (Suche überspringen!) ---
+        await page.goto('https://le-bk-muenster.webuntis.com/WebUntis/?school=le-bk-muenster#/basic/login');
         
-        // Warte kurz, bis die Seite "da" ist
-        await page.waitForLoadState('networkidle');
+        // Warten bis Seite geladen
+        await page.waitForLoadState('domcontentloaded');
 
         // Cookie Banner wegklicken (falls vorhanden)
         try {
-            await page.getByRole('button', { name: 'Alles akzeptieren' }).click({ timeout: 3000 });
-        } catch (e) { /* Kein Banner, egal */ }
+            const cookieBtn = page.getByRole('button', { name: 'Alles akzeptieren' });
+            if (await cookieBtn.isVisible({ timeout: 5000 })) {
+                await cookieBtn.click();
+                console.log("Cookies akzeptiert.");
+            }
+        } catch (e) { /* Kein Banner */ }
 
-        console.log("Suche Schule...");
+        console.log("Warte auf Login-Felder...");
+        const userField = page.getByRole('textbox', { name: 'Benutzername' });
+        await userField.waitFor({ state: 'visible', timeout: 30000 });
         
-        // Statt auf Text zu klicken, direkt das Eingabefeld suchen
-        // Wir suchen das Feld generischer, das ist stabiler
-        const searchInput = page.getByRole('combobox'); 
-        await searchInput.first().waitFor({ state: 'visible', timeout: 10000 });
-        await searchInput.first().fill('Ludwig-Erhard-Berufskolleg Münster');
-        await page.waitForTimeout(1000); // Kurz warten für Dropdown
-        await page.keyboard.press('Enter');
-
-        console.log("Schule gewählt. Login Daten eingeben...");
-
-        // Weiter zum Login
-        await page.waitForURL(/.*school=le-bk-muenster.*/, { timeout: 20000 });
-        
-        // Login Formular
-        await page.getByRole('textbox', { name: 'Benutzername' }).fill(unitsuser); 
+        await userField.fill(unitsuser); 
         await page.getByRole('textbox', { name: 'Passwort' }).fill(unitspass);
         await page.getByRole('button', { name: 'Login' }).click();
         
-        console.log("Login Klick ausgeführt.");
+        console.log("Login abgeschickt. Warte auf Dashboard...");
 
         // --- Stundenplan ---
-        // Warte bis Dashboard geladen ist
-        await page.waitForURL(/.*today.*/, { timeout: 30000 });
-        console.log("Dashboard geladen.");
-
+        await page.getByRole('link', { name: 'Mein Stundenplan' }).first().waitFor({ state: 'visible', timeout: 30000 });
         await page.getByRole('link', { name: 'Mein Stundenplan' }).click();
         
-        // Manchmal muss man zwei mal klicken oder warten
-        await page.waitForTimeout(2000);
-        
+        await page.waitForTimeout(3000); 
         await page.getByTestId('date-picker-with-arrows-previous').click(); 
         
-        // Sicherstellen, dass wir wirklich im Stundenplan sind
-        await page.waitForLoadState('networkidle');
-
-        // Warte EXTREM geduldig auf die erste Karte (bis zu 45s)
-        console.log("Warte auf Stundenplan-Karten...");
-        await page.getByTestId('lesson-card-row').first().waitFor({ state: 'visible', timeout: 45000 }); 
+        console.log("Woche gewechselt. Warte auf Karten...");
+        await page.getByTestId('lesson-card-row').first().waitFor({ state: 'visible', timeout: 60000 }); 
         
-        // --- Fächer Logik (Unverändert aber mit Timeout Schutz) ---
+        // --- Fächer Logik ---
         
         // EVP (Montag)
         try {
             await page.getByTestId('lesson-card-row').nth(2).click({ timeout: 5000 });
+            await page.waitForTimeout(500);
             EVP_val = await page.locator('textarea.ant-input').inputValue({ timeout: 5000 });
             if (!EVP_val.trim()) EVP_val = 'KEIN INHALT BEI FACH EVP';
-        } catch (error) { EVP_val = 'KEIN INHALT BEI FACH EVP (Fehler)'; }
+        } catch (error) { EVP_val = 'KEIN INHALT BEI FACH EVP (Fehler/Timeout)'; }
         await safeClose();
 
         // DEUTSCH
         try {
             await page.getByText('D', { exact: true }).click({ timeout: 5000 }); 
+            await page.waitForTimeout(500);
             DE_val = await page.locator('textarea.ant-input').inputValue({ timeout: 5000 });
             if (!DE_val.trim()) DE_val = 'KEIN INHALT BEI FACH DEUTSCH';
-        } catch (error) { DE_val = 'KEIN INHALT BEI FACH DEUTSCH (Fehler)'; }
+        } catch (error) { DE_val = 'KEIN INHALT BEI FACH DEUTSCH (Fehler/Timeout)'; }
         await safeClose();
 
         // STDM
         try {
             await page.locator('div').filter({ hasText: /^STDM$/ }).first().click({ timeout: 5000 });
+            await page.waitForTimeout(500);
             STDM_val = await page.locator('textarea.ant-input').inputValue({ timeout: 5000 });
             if (!STDM_val.trim()) STDM_val = 'KEIN INHALT BEI FACH STDM';
-        } catch (error) { STDM_val = 'KEIN INHALT BEI FACH STDM (Fehler)'; }
+        } catch (error) { STDM_val = 'KEIN INHALT BEI FACH STDM (Fehler/Timeout)'; }
         await safeClose();
 
         // KRYPTOLOGIE
         try {
             await page.locator('[data-testid="lesson-card-subject"]', { hasText: 'D-KRYPT' }).click({ timeout: 5000 });
+            await page.waitForTimeout(500);
             Kryp_val = await page.locator('textarea.ant-input').inputValue({ timeout: 5000 });
             if (!Kryp_val.trim()) Kryp_val = 'KEIN INHALT BEI FACH KRYPTOLOGIE';
-        } catch (error) { Kryp_val = 'KEIN INHALT BEI FACH KRYPTOLOGIE (Fehler)'; }
+        } catch (error) { Kryp_val = 'KEIN INHALT BEI FACH KRYPTOLOGIE (Fehler/Timeout)'; }
         await safeClose();
 
         // GID (Freitag)
         try {
             await page.locator('div').filter({ hasText: /^GID$/ }).first().click({ timeout: 5000 });
+            await page.waitForTimeout(500);
             GID_val = await page.locator('textarea.ant-input').inputValue({ timeout: 5000 });
             if (!GID_val.trim()) GID_val = 'KEIN INHALT BEI FACH GID';
-        } catch (error) { GID_val = 'KEIN INHALT BEI FACH GID (Fehler)'; }
+        } catch (error) { GID_val = 'KEIN INHALT BEI FACH GID (Fehler/Timeout)'; }
         await safeClose();
 
         // ENGLISCH
         try {
             await page.getByText('E', { exact: true }).click({ timeout: 5000 });
+            await page.waitForTimeout(500);
             EN_val = await page.locator('textarea.ant-input').inputValue({ timeout: 5000 });
             if (!EN_val.trim()) EN_val = 'KEIN INHALT BEI FACH ENGLISCH';
-        } catch (error) { EN_val = 'KEIN INHALT BEI FACH ENGLISCH (Fehler)'; }
+        } catch (error) { EN_val = 'KEIN INHALT BEI FACH ENGLISCH (Fehler/Timeout)'; }
         await safeClose();
 
         // EVP2
         try {
             await page.locator('div').filter({ hasText: /^EVP$/ }).nth(3).click({ timeout: 5000 });
+            await page.waitForTimeout(500);
             EVP2_val = await page.locator('textarea.ant-input').inputValue({ timeout: 5000 });
             if (!EVP2_val.trim()) EVP2_val = 'KEIN INHALT BEI FACH EVP';
-        } catch (error) { EVP2_val = 'KEIN INHALT BEI FACH EVP (Fehler)'; }
+        } catch (error) { EVP2_val = 'KEIN INHALT BEI FACH EVP (Fehler/Timeout)'; }
         await safeClose();
 
 
@@ -188,10 +179,15 @@ test('Berichtsheft Automatisierung', async ({ page }) => {
         // --- IHK Eintrag ---
         console.log("Start: IHK Login");
         await page.goto('https://www.bildung-ihk-nordwestfalen.de/tibrosBB/BB_auszubildende.jsp');
-        await page.getByRole('textbox', { name: 'Azubinummer' }).fill(ihk);
+        
+        const azubiInput = page.getByRole('textbox', { name: 'Azubinummer' });
+        await azubiInput.waitFor({state: 'visible', timeout: 20000});
+        
+        await azubiInput.fill(ihk);
         await page.getByRole('textbox', { name: 'Passwort' }).fill(ihkpass);
         await page.getByRole('button', { name: 'Login' }).click();
         
+        // IHK Navigation
         await page.getByRole('link', { name: 'Ausbildungsnachweise', exact: true }).click();
         await page.getByRole('button', { name: 'Neuer Eintrag' }).first().click();
         
@@ -239,18 +235,18 @@ test('Berichtsheft Automatisierung', async ({ page }) => {
 
         console.log("Sende Mail an:", emailTo);
         
-        // Schutz gegen fehlenden Host
         if (!process.env.EMAIL_HOST) {
-            console.error("FEHLER: EMAIL_HOST Secret fehlt in GitHub Actions!");
+            console.error("ACHTUNG: EMAIL_HOST Secret fehlt. E-Mail kann nicht gesendet werden.");
         } else {
             try {
+                // Wir warten explizit auf den Versand
                 await transporter.sendMail({
                     from: `"Berichtsheft Bot" <${process.env.EMAIL_USER}>`,
                     to: emailTo,
                     subject: `Berichtsheft: ${testStatus}`,
                     html: htmlBody,
                 });
-                console.log("Mail gesendet.");
+                console.log("Mail erfolgreich gesendet!");
             } catch (e) {
                 console.error("Mail konnte nicht gesendet werden:", e);
             }
