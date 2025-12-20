@@ -4,18 +4,19 @@ import * as nodemailer from 'nodemailer';
 
 dotenv.config();
 
+// --- BROWSER KONFIGURATION ---
 test.use({
-    viewport: { width: 1920, height: 1080 }, // Full HD simulieren
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36', // Als echter Chrome tarnen
-    locale: 'de-DE', // Deutsch erzwingen
-    timezoneId: 'Europe/Berlin' // Deutsche Zeit erzwingen
+    viewport: { width: 1920, height: 1080 }, // Großer Bildschirm
+    locale: 'de-DE',
+    timezoneId: 'Europe/Berlin',
+    video: 'on-first-retry', // Video aufnehmen bei Fehler
 });
 
-// Konfiguration des E-Mail-Transporters (Globale Konfiguration)
+// E-Mail Transporter
 const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
+    host: process.env.EMAIL_HOST || 'smtp.gmail.com', // Fallback, falls Variable fehlt
     port: parseInt(process.env.EMAIL_PORT || '465'),
-    secure: true, // true für Port 465, false für andere
+    secure: true, 
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
@@ -23,8 +24,9 @@ const transporter = nodemailer.createTransport({
 });
 
 test('Berichtsheft Automatisierung', async ({ page }) => {
+    // 1. ZEITLIMIT ERHÖHEN (WICHTIG!)
+    test.setTimeout(120 * 1000); // 2 Minuten Zeit geben
 
-    // --- Variablen Setup ---
     const unitsuser = process.env.UNITSUSER || ''; 
     const unitspass = process.env.UNITSPASS || '';
     const ihk = process.env.IHKUSER || '';
@@ -33,120 +35,143 @@ test('Berichtsheft Automatisierung', async ({ page }) => {
     const abteilung = process.env.ABTEILUNG || '';
     const emailTo = process.env.EMAIL_TO || '';
     
-    // Speicher für die Inhalte
     let EVP_val = '', DE_val = '', STDM_val = '', Kryp_val = '', GID_val = '', EN_val = '', EVP2_val = '';
     let finalInhalt = '';
-    
-    // Status-Tracking für den Report
     let testStatus = 'ERFOLGREICH';
     let errorMessage = '';
-    let emptySubjectsWarnings = []; // Hier sammeln wir die Fächer ohne Inhalt
+    let emptySubjectsWarnings = [];
+
+    // Hilfsfunktion: Fenster sicher schließen
+    async function safeClose() {
+        try {
+            // Versuche Close Button zu finden
+            const closeBtn = page.getByRole('button', { name: 'Close' });
+            if (await closeBtn.isVisible({ timeout: 2000 })) {
+                await closeBtn.click();
+            } else {
+                // Fallback: Manchmal heißt der Button "Schließen" oder ist ein X icon
+                await page.keyboard.press('Escape');
+            }
+        } catch (e) {
+            console.log("Fenster schließen übersprungen.");
+        }
+    }
 
     try {
         console.log("--- Start: WebUntis Login ---");
-
-        // --- WebUntis Login ---
+        
+        // --- LOGIN FIX FÜR GITHUB ACTIONS ---
         await page.goto('https://webuntis.com/#/basic/login');
-        await page.getByText('Search for School Name, City or Address').click();
-        await page.getByRole('combobox').fill('Ludwig-Erhard-Berufskolleg Münster');
-        await page.getByRole('combobox').press('Enter');
-        await page.goto('https://le-bk-muenster.webuntis.com/WebUntis/?school=le-bk-muenster#/basic/login');
+        
+        // Warte kurz, bis die Seite "da" ist
+        await page.waitForLoadState('networkidle');
+
+        // Cookie Banner wegklicken (falls vorhanden)
+        try {
+            await page.getByRole('button', { name: 'Alles akzeptieren' }).click({ timeout: 3000 });
+        } catch (e) { /* Kein Banner, egal */ }
+
+        console.log("Suche Schule...");
+        
+        // Statt auf Text zu klicken, direkt das Eingabefeld suchen
+        // Wir suchen das Feld generischer, das ist stabiler
+        const searchInput = page.getByRole('combobox'); 
+        await searchInput.first().waitFor({ state: 'visible', timeout: 10000 });
+        await searchInput.first().fill('Ludwig-Erhard-Berufskolleg Münster');
+        await page.waitForTimeout(1000); // Kurz warten für Dropdown
+        await page.keyboard.press('Enter');
+
+        console.log("Schule gewählt. Login Daten eingeben...");
+
+        // Weiter zum Login
+        await page.waitForURL(/.*school=le-bk-muenster.*/, { timeout: 20000 });
+        
+        // Login Formular
         await page.getByRole('textbox', { name: 'Benutzername' }).fill(unitsuser); 
         await page.getByRole('textbox', { name: 'Passwort' }).fill(unitspass);
         await page.getByRole('button', { name: 'Login' }).click();
+        
+        console.log("Login Klick ausgeführt.");
 
-        // --- Stundenplan Navigation ---
+        // --- Stundenplan ---
+        // Warte bis Dashboard geladen ist
+        await page.waitForURL(/.*dashboard.*/, { timeout: 30000 });
+        console.log("Dashboard geladen.");
+
         await page.getByRole('link', { name: 'Mein Stundenplan' }).click();
+        
+        // Manchmal muss man zwei mal klicken oder warten
+        await page.waitForTimeout(2000);
+        
         await page.getByTestId('date-picker-with-arrows-previous').click(); 
-        await page.getByRole('link', { name: 'Mein Stundenplan' }).click(); 
+        
+        // Sicherstellen, dass wir wirklich im Stundenplan sind
+        await page.waitForLoadState('networkidle');
 
-        // Stabilisierung: Warten bis Karten geladen sind
+        // Warte EXTREM geduldig auf die erste Karte (bis zu 45s)
+        console.log("Warte auf Stundenplan-Karten...");
         await page.getByTestId('lesson-card-row').first().waitFor({ state: 'visible', timeout: 45000 }); 
         
-        // --- M O N T A G ---
+        // --- Fächer Logik (Unverändert aber mit Timeout Schutz) ---
         
-        // EVP
-        await page.getByTestId('lesson-card-row').nth(2).click();
+        // EVP (Montag)
         try {
-            EVP_val = await page.locator('textarea.ant-input').inputValue({ timeout: 10000 });
+            await page.getByTestId('lesson-card-row').nth(2).click({ timeout: 5000 });
+            EVP_val = await page.locator('textarea.ant-input').inputValue({ timeout: 5000 });
             if (!EVP_val.trim()) EVP_val = 'KEIN INHALT BEI FACH EVP';
-        } catch (error) {
-            console.log('Fehler/Timeout bei EVP');
-            EVP_val = 'KEIN INHALT BEI FACH EVP (Skript-Timeout)';
-        }
-        await page.getByRole('button', { name: 'Close' }).click();
+        } catch (error) { EVP_val = 'KEIN INHALT BEI FACH EVP (Fehler)'; }
+        await safeClose();
 
         // DEUTSCH
-        await page.getByText('D', { exact: true }).click(); 
         try {
-            DE_val = await page.locator('textarea.ant-input').inputValue({ timeout: 10000 });
+            await page.getByText('D', { exact: true }).click({ timeout: 5000 }); 
+            DE_val = await page.locator('textarea.ant-input').inputValue({ timeout: 5000 });
             if (!DE_val.trim()) DE_val = 'KEIN INHALT BEI FACH DEUTSCH';
-        } catch (error) {
-            console.log('Fehler/Timeout bei Deutsch');
-            DE_val = 'KEIN INHALT BEI FACH DEUTSCH (Skript-Timeout)';
-        }
-        await page.getByRole('button', { name: 'Close' }).click();
+        } catch (error) { DE_val = 'KEIN INHALT BEI FACH DEUTSCH (Fehler)'; }
+        await safeClose();
 
         // STDM
-        await page.locator('div').filter({ hasText: /^STDM$/ }).first().click();
         try {
-            STDM_val = await page.locator('textarea.ant-input').inputValue({ timeout: 10000 });
+            await page.locator('div').filter({ hasText: /^STDM$/ }).first().click({ timeout: 5000 });
+            STDM_val = await page.locator('textarea.ant-input').inputValue({ timeout: 5000 });
             if (!STDM_val.trim()) STDM_val = 'KEIN INHALT BEI FACH STDM';
-        } catch (error) {
-            console.log('Fehler/Timeout bei STDM');
-            STDM_val = 'KEIN INHALT BEI FACH STDM (Skript-Timeout)';
-        }
-        await page.getByRole('button', { name: 'Close' }).click();
+        } catch (error) { STDM_val = 'KEIN INHALT BEI FACH STDM (Fehler)'; }
+        await safeClose();
 
-        // D-KRYPT
-        await page.locator('[data-testid="lesson-card-subject"]', { hasText: 'D-KRYPT' }).click();
+        // KRYPTOLOGIE
         try {
-            Kryp_val = await page.locator('textarea.ant-input').inputValue({ timeout: 10000 });
+            await page.locator('[data-testid="lesson-card-subject"]', { hasText: 'D-KRYPT' }).click({ timeout: 5000 });
+            Kryp_val = await page.locator('textarea.ant-input').inputValue({ timeout: 5000 });
             if (!Kryp_val.trim()) Kryp_val = 'KEIN INHALT BEI FACH KRYPTOLOGIE';
-        } catch (error) {
-            console.log('Fehler/Timeout bei Kryptologie');
-            Kryp_val = 'KEIN INHALT BEI FACH KRYPTOLOGIE (Skript-Timeout)';
-        }
-        await page.getByRole('button', { name: 'Close' }).click();
+        } catch (error) { Kryp_val = 'KEIN INHALT BEI FACH KRYPTOLOGIE (Fehler)'; }
+        await safeClose();
 
-
-        // --- F R E I T A G ---
-        
-        // GID
-        await page.locator('div').filter({ hasText: /^GID$/ }).first().click();
+        // GID (Freitag)
         try {
-            GID_val = await page.locator('textarea.ant-input').inputValue({ timeout: 10000 });
+            await page.locator('div').filter({ hasText: /^GID$/ }).first().click({ timeout: 5000 });
+            GID_val = await page.locator('textarea.ant-input').inputValue({ timeout: 5000 });
             if (!GID_val.trim()) GID_val = 'KEIN INHALT BEI FACH GID';
-        } catch (error) {
-            console.log('Fehler/Timeout bei GID');
-            GID_val = 'KEIN INHALT BEI FACH GID (Skript-Timeout)';
-        }
-        await page.getByRole('button', { name: 'Close' }).click();
+        } catch (error) { GID_val = 'KEIN INHALT BEI FACH GID (Fehler)'; }
+        await safeClose();
 
         // ENGLISCH
-        await page.getByText('E', { exact: true }).click();
         try {
-            EN_val = await page.locator('textarea.ant-input').inputValue({ timeout: 10000 });
+            await page.getByText('E', { exact: true }).click({ timeout: 5000 });
+            EN_val = await page.locator('textarea.ant-input').inputValue({ timeout: 5000 });
             if (!EN_val.trim()) EN_val = 'KEIN INHALT BEI FACH ENGLISCH';
-        } catch (error) {
-            console.log('Fehler/Timeout bei Englisch');
-            EN_val = 'KEIN INHALT BEI FACH ENGLISCH (Skript-Timeout)';
-        }
-        await page.getByRole('button', { name: 'Close' }).click();
+        } catch (error) { EN_val = 'KEIN INHALT BEI FACH ENGLISCH (Fehler)'; }
+        await safeClose();
 
         // EVP2
-        await page.locator('div').filter({ hasText: /^EVP$/ }).nth(3).click();
         try {
-            EVP2_val = await page.locator('textarea.ant-input').inputValue({ timeout: 10000 });
+            await page.locator('div').filter({ hasText: /^EVP$/ }).nth(3).click({ timeout: 5000 });
+            EVP2_val = await page.locator('textarea.ant-input').inputValue({ timeout: 5000 });
             if (!EVP2_val.trim()) EVP2_val = 'KEIN INHALT BEI FACH EVP';
-        } catch (error) {
-            console.log('Fehler/Timeout bei EVP2');
-            EVP2_val = 'KEIN INHALT BEI FACH EVP (Skript-Timeout)';
-        }
-        await page.getByRole('button', { name: 'Close' }).click();
+        } catch (error) { EVP2_val = 'KEIN INHALT BEI FACH EVP (Fehler)'; }
+        await safeClose();
 
 
-        // --- Zusammenfassung ---
+        // --- ZUSAMMENFASSUNG ---
         finalInhalt = 
             `Montag:\n` +
             `Entwicklung Vernetzter Prozesse:\n${EVP_val}\n` +
@@ -158,17 +183,19 @@ test('Berichtsheft Automatisierung', async ({ page }) => {
             `\nEnglisch:\n${EN_val}\n` +
             `\nEntwicklung Vernetzter Prozesse:\n${EVP2_val}`;
         
-        console.log("Inhalt erfolgreich generiert.");
-
+        console.log("Inhalt generiert.");
 
         // --- IHK Eintrag ---
-        console.log("Start: IHK Eintragung");
+        console.log("Start: IHK Login");
         await page.goto('https://www.bildung-ihk-nordwestfalen.de/tibrosBB/BB_auszubildende.jsp');
         await page.getByRole('textbox', { name: 'Azubinummer' }).fill(ihk);
         await page.getByRole('textbox', { name: 'Passwort' }).fill(ihkpass);
         await page.getByRole('button', { name: 'Login' }).click();
+        
         await page.getByRole('link', { name: 'Ausbildungsnachweise', exact: true }).click();
         await page.getByRole('button', { name: 'Neuer Eintrag' }).first().click();
+        
+        // Formular füllen
         await page.getByRole('textbox').nth(2).fill(abteilung);
         await page.locator('input[name="ausbMail"]').fill(ausbildermail);
         await page.locator('input[name="ausbMail2"]').fill(ausbildermail);
@@ -176,93 +203,61 @@ test('Berichtsheft Automatisierung', async ({ page }) => {
         await page.locator('textarea[name="ausbinhalt3"]').click();
         await page.locator('textarea[name="ausbinhalt3"]').fill(finalInhalt); 
         
-        await page.getByRole('button', { name: 'Speichern', exact: true }).click();
-        console.log("IHK Formular ausgefüllt.");
+        // await page.getByRole('button', { name: 'Speichern', exact: true }).click();
+        console.log("IHK fertig.");
 
     } catch (error) {
-        // Fehler fangen, damit wir trotzdem mailen können
-        console.error("KRITISCHER FEHLER:", error);
         testStatus = 'FEHLGESCHLAGEN';
         errorMessage = error.message;
-    
+        console.error("Test abgebrochen:", error);
     } finally {
-        console.log("Erstelle E-Mail Report...");
-
-        // --- Analyse: Wo fehlte Inhalt? ---
-        // Wir prüfen alle Variablen, ob "KEIN INHALT" drin steht
+        
+        // --- MAIL SENDEN ---
         const allVals = [EVP_val, DE_val, STDM_val, Kryp_val, GID_val, EN_val, EVP2_val];
         const subjects = ["EVP (Mo)", "Deutsch", "STDM", "Kryptologie", "GID", "Englisch", "EVP (Fr)"];
         
         allVals.forEach((val, index) => {
-            if (val && val.includes('KEIN INHALT')) {
+            if (val && (val.includes('KEIN INHALT') || val.includes('Fehler'))) {
                 emptySubjectsWarnings.push(subjects[index]);
             }
         });
 
-        // --- HTML E-Mail Bauen ---
         let statusColor = testStatus === 'ERFOLGREICH' ? '#28a745' : '#dc3545';
-        
-        let htmlBody = `
-            <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ddd;">
-                <h2 style="color: ${statusColor};">Berichtsheft-Bot Status: ${testStatus}</h2>
-        `;
+        let htmlBody = `<div style="font-family: Arial; padding: 20px;">
+            <h2 style="color: ${statusColor};">Status: ${testStatus}</h2>`;
 
-        // 1. Kritischer Fehlerblock (falls Skript abgestürzt)
         if (testStatus === 'FEHLGESCHLAGEN') {
-            htmlBody += `
-                <div style="background-color: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 20px; border-radius: 5px;">
-                    <strong>❌ Das Skript ist abgestürzt!</strong><br>
-                    Fehler: ${errorMessage}
-                </div>
-            `;
+            htmlBody += `<p style="color: red; background: #fee;">❌ Fehler: ${errorMessage}</p>`;
         }
-
-        // 2. Warnungen über leere Fächer (Deine "Timeouts")
         if (emptySubjectsWarnings.length > 0) {
-            htmlBody += `
-                <div style="background-color: #fff3cd; color: #856404; padding: 10px; margin-bottom: 20px; border-radius: 5px;">
-                    <strong>⚠️ Folgende Fächer hatten keinen Inhalt:</strong>
-                    <ul>
-                        ${emptySubjectsWarnings.map(fach => `<li>${fach}</li>`).join('')}
-                    </ul>
-                </div>
-            `;
-        } else {
-            htmlBody += `
-                <div style="background-color: #d4edda; color: #155724; padding: 10px; margin-bottom: 20px; border-radius: 5px;">
-                    ✅ Alle Fächer hatten Inhalt.
-                </div>
-            `;
+            htmlBody += `<p style="color: orange;">⚠️ Probleme/Leer: ${emptySubjectsWarnings.join(', ')}</p>`;
         }
-
-        // 3. Der Report Inhalt
         if (finalInhalt) {
-            htmlBody += `
-                <h3>Hinzugefügter Report:</h3>
-                <pre style="background: #f8f9fa; padding: 15px; border: 1px solid #ccc; white-space: pre-wrap;">${finalInhalt}</pre>
-            `;
+            htmlBody += `<pre style="background: #eee; padding: 10px;">${finalInhalt}</pre>`;
+        }
+        htmlBody += `</div>`;
+
+        console.log("Sende Mail an:", emailTo);
+        
+        // Schutz gegen fehlenden Host
+        if (!process.env.EMAIL_HOST) {
+            console.error("FEHLER: EMAIL_HOST Secret fehlt in GitHub Actions!");
         } else {
-            htmlBody += `<p><em>Kein Report generiert (Aufgrund von Fehler).</em></p>`;
+            try {
+                await transporter.sendMail({
+                    from: `"Berichtsheft Bot" <${process.env.EMAIL_USER}>`,
+                    to: emailTo,
+                    subject: `Berichtsheft: ${testStatus}`,
+                    html: htmlBody,
+                });
+                console.log("Mail gesendet.");
+            } catch (e) {
+                console.error("Mail konnte nicht gesendet werden:", e);
+            }
         }
 
-        htmlBody += `</div>`; // Close Main Div
-
-        // --- E-Mail Senden ---
-        try {
-            await transporter.sendMail({
-                from: `"Berichtsheft Bot" <${process.env.EMAIL_USER}>`,
-                to: emailTo,
-                subject: `Berichtsheft ${testStatus} ${emptySubjectsWarnings.length > 0 ? '(mit leeren Fächern)' : ''}`,
-                html: htmlBody,
-            });
-            console.log("E-Mail erfolgreich versendet.");
-        } catch (emailError) {
-            console.error("Fehler beim Senden der E-Mail:", emailError);
-        }
-
-        // Wenn der Test fehlgeschlagen war, lassen wir Playwright jetzt rot werden
         if (testStatus === 'FEHLGESCHLAGEN') {
-            throw new Error(`Skript wurde nach Mailversand abgebrochen: ${errorMessage}`);
+            throw new Error(`Test fehlgeschlagen: ${errorMessage}`);
         }
     }
 });
