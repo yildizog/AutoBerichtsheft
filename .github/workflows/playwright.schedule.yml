@@ -1,18 +1,20 @@
-name: Scheduled Playwright E2E Test
+name: Autoberichtsheft-Bot
 
 on:
-  # 1. CRON-JOB: Führt den Test automatisch nach Zeitplan aus
-  # Läuft jeden Dienstag um 09:00 Uhr UTC.
+  # 1. CRON-JOB: Zeitplan
+  # 21:40 Uhr in Deutschland (Winterzeit) = 20:40 Uhr UTC
+  # Die Sternchen bedeuten: Jeden Tag, jeden Monat, jeden Wochentag
   schedule:
-    - cron: '0 9 * * 2'
+    - cron: '0 8 * * 2'
   
-  # 2. MANUELL: Erlaubt das Starten über den 'Run workflow'-Button auf GitHub
+  # 2. MANUELL: Zum sofortigen Testen (besser als auf Cron warten!)
   workflow_dispatch:
 
 jobs:
   e2e-test:
     runs-on: ubuntu-latest
     
+    # Hier müssen ALLE Secrets rein, auch die für die E-Mail!
     env:
       UNITSUSER: ${{ secrets.UNITSUSER }}
       UNITSPASS: ${{ secrets.UNITSPASS }}
@@ -20,6 +22,12 @@ jobs:
       IHKPASS: ${{ secrets.IHKPASS }}
       AUSBILDERMAIL: ${{ secrets.AUSBILDERMAIL }}
       ABTEILUNG: ${{ secrets.ABTEILUNG }}
+      # NEU: E-Mail Secrets (Wichtig für Nodemailer)
+      EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
+      EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
+      EMAIL_USER: ${{ secrets.EMAIL_USER }}
+      EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+      EMAIL_TO: ${{ secrets.EMAIL_TO }}
 
     steps:
       - name: Checkout Code
@@ -34,9 +42,9 @@ jobs:
         run: npm ci
         
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
+        run: npx playwright install --with-deps chromium
 
-      - name: Run Playwright Tests (Zeitgesteuert)
+      - name: Run Playwright Tests
         run: npx playwright test
         
       - name: Upload Test Report (Optional)
