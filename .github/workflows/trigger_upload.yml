@@ -13,6 +13,7 @@ jobs:
       FIREBASE_URL: ${{ secrets.FIREBASE_URL }}
       FIREBASE_SECRET: ${{ secrets.FIREBASE_SECRET }}
       INPUT_TEXT: ${{ github.event.client_payload.text }}
+      REPORT_ID: ${{ github.event.client_payload.reportId }} 
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

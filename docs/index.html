@@ -3,55 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Berichtsheft Dashboard</title>
+    <title>Berichtsheft Manager</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>📚 Berichtsheft Dashboard</h1>
-        </header>
-
-        <div class="grid">
-            <div class="card">
-                <div class="card-header"><h2 class="card-title">Auth</h2></div>
-                <input type="password" id="ghToken" class="token-input" placeholder="GitHub Token hier einfügen (wird lokal gespeichert)">
-                <p style="margin-top:10px; color:#666; font-size:12px;">Letztes Update: <span id="lastRunDate">-</span></p>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">Status</h2>
-                    <span class="status-badge status-waiting" id="statusBadge">-</span>
-                </div>
-                <div class="empty-state">
-                    <div class="spinner" id="mainSpinner" style="display:none"></div>
-                    <p id="statusMessage">Warte auf Firebase...</p>
-                </div>
-                <div class="actions">
-                    <button class="button button-primary" onclick="startExtractRun()">▶️ Run 1: Scrapen</button>
-                </div>
+        
+        <div id="authSection" class="hidden">
+            <div class="auth-card">
+                <h2>🔐 Login</h2>
+                <p style="color:#888; font-size:14px; margin-top:5px;">Bitte GitHub Personal Access Token eingeben</p>
+                <input type="password" id="ghTokenInput" class="token-input" placeholder="ghp_...">
+                <button class="btn btn-primary" onclick="saveTokenAndLogin()">Speichern & Starten</button>
             </div>
         </div>
 
-        <div class="card" id="editorCard" style="display: none;">
-            <div class="card-header"><h2 class="card-title">Inhalt</h2></div>
-            <div class="subject-grid">
-                <div class="subject-item"><div class="subject-label">Mo - EVP</div><textarea class="subject-content" id="evp1"></textarea></div>
-                <div class="subject-item"><div class="subject-label">Mo - Deutsch</div><textarea class="subject-content" id="deutsch"></textarea></div>
-                <div class="subject-item"><div class="subject-label">Mo - STDM</div><textarea class="subject-content" id="stdm"></textarea></div>
-                <div class="subject-item"><div class="subject-label">Mo - Krypt</div><textarea class="subject-content" id="kryp"></textarea></div>
-                <div class="subject-item"><div class="subject-label">Fr - GID</div><textarea class="subject-content" id="gid"></textarea></div>
-                <div class="subject-item"><div class="subject-label">Fr - Englisch</div><textarea class="subject-content" id="englisch"></textarea></div>
-                <div class="subject-item"><div class="subject-label">Fr - EVP (2)</div><textarea class="subject-content" id="evp2"></textarea></div>
+        <div id="appContent" class="hidden">
+            <header>
+                <h1>📚 Berichtsheft Manager</h1>
+                <button class="logout-btn" onclick="logout()">Token löschen</button>
+            </header>
+
+            <div id="view-list">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                    <h2>Deine Berichte</h2>
+                    <button class="btn btn-primary" style="flex:0;" onclick="triggerScrape()">
+                        + Neue Woche holen (Run 1)
+                    </button>
+                </div>
+                <ul id="reportList" class="process-list">
+                    <li style="text-align:center; color:#666;">Lade Daten...</li>
+                </ul>
             </div>
-            <div class="actions">
-                <button class="button button-success" onclick="startSubmitRun()">✅ Run 2: Eintragen</button>
+
+            <div id="view-detail" class="hidden">
+                <div class="detail-header">
+                    <button class="back-btn" onclick="showList()">←</button>
+                    <div>
+                        <h2 id="detailTitle">Woche vom ...</h2>
+                        <span id="detailStatus" class="badge draft">Lade...</span>
+                    </div>
+                </div>
+
+                <div class="subject-grid">
+                    <div class="subject-box"><span class="subject-label">Montag - EVP</span><textarea id="evp1"></textarea></div>
+                    <div class="subject-box"><span class="subject-label">Montag - Deutsch</span><textarea id="deutsch"></textarea></div>
+                    <div class="subject-box"><span class="subject-label">Montag - STDM</span><textarea id="stdm"></textarea></div>
+                    <div class="subject-box"><span class="subject-label">Montag - Kryptologie</span><textarea id="kryp"></textarea></div>
+                    <div class="subject-box"><span class="subject-label">Freitag - GID</span><textarea id="gid"></textarea></div>
+                    <div class="subject-box"><span class="subject-label">Freitag - Englisch</span><textarea id="englisch"></textarea></div>
+                    <div class="subject-box"><span class="subject-label">Freitag - EVP (2)</span><textarea id="evp2"></textarea></div>
+                </div>
+
+                <div class="action-bar">
+                    <button id="btnUpload" class="btn btn-success" onclick="triggerUpload()">
+                        ✅ Ins IHK Portal eintragen (Run 2)
+                    </button>
+                </div>
+                <p id="detailLog" style="margin-top:10px; font-family:monospace; font-size:12px; color:#666;"></p>
             </div>
         </div>
     </div>
+
     <script src="config.js"></script>
     <script src="script.js"></script>
 </body>

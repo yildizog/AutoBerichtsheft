@@ -2,8 +2,15 @@ import { test } from '@playwright/test';
 import * as dotenv from 'dotenv';
 dotenv.config();
 
-test('IHK Upload', async ({ page }) => {
+test('Teil 2: IHK Upload', async ({ page }) => {
     test.setTimeout(120 * 1000); 
+
+    // Wir brauchen die ID, um den Status zu updaten
+    const reportId = process.env.REPORT_ID;
+    
+    // Status auf "running" setzen
+    if(reportId) await updateStatus(reportId, 'running', 'Upload gestartet...');
+
     let contentObj = { evp1:'', deutsch:'', stdm:'', kryp:'', gid:'', englisch:'', evp2:'' };
     try { if(process.env.INPUT_TEXT) contentObj = JSON.parse(process.env.INPUT_TEXT); } catch(e) {}
 
@@ -26,16 +33,23 @@ test('IHK Upload', async ({ page }) => {
         await page.locator('textarea[name="ausbinhalt3"]').click();
         await page.locator('textarea[name="ausbinhalt3"]').fill(finalInhalt); 
         
-        // await page.getByRole('button', { name: 'Speichern', exact: true }).click(); // Einkommentieren wenn fertig
+        // await page.getByRole('button', { name: 'Speichern', exact: true }).click();
         
-        await fetch(`${process.env.FIREBASE_URL}/status.json?auth=${process.env.FIREBASE_SECRET}`, {
-            method: 'PATCH', body: JSON.stringify({ status: 'success', message: 'Eingetragen um ' + new Date().toLocaleTimeString() })
-        });
+        // ERFOLG
+        if(reportId) await updateStatus(reportId, 'success', 'Erfolgreich hochgeladen!');
 
     } catch (error) {
-        await fetch(`${process.env.FIREBASE_URL}/status.json?auth=${process.env.FIREBASE_SECRET}`, {
-            method: 'PATCH', body: JSON.stringify({ status: 'failed', message: error.message })
-        });
+        // FEHLER
+        if(reportId) await updateStatus(reportId, 'failed', `Fehler: ${error.message}`);
         throw error;
     }
 });
+
+async function updateStatus(id, status, msg) {
+    if (!process.env.FIREBASE_URL || !process.env.FIREBASE_SECRET) return;
+    await fetch(`${process.env.FIREBASE_URL}/reports/${id}.json?auth=${process.env.FIREBASE_SECRET}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: status, message: msg }),
+        headers: { 'Content-Type': 'application/json' }
+    });
+}
