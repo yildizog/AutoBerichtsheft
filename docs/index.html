@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Berichtsheft Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📚 Berichtsheft Dashboard</h1>
+        </header>
+
+        <div class="grid">
+            <div class="card">
+                <div class="card-header"><h2 class="card-title">Auth</h2></div>
+                <input type="password" id="ghToken" class="token-input" placeholder="GitHub Token hier einfügen (wird lokal gespeichert)">
+                <p style="margin-top:10px; color:#666; font-size:12px;">Letztes Update: <span id="lastRunDate">-</span></p>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">Status</h2>
+                    <span class="status-badge status-waiting" id="statusBadge">-</span>
+                </div>
+                <div class="empty-state">
+                    <div class="spinner" id="mainSpinner" style="display:none"></div>
+                    <p id="statusMessage">Warte auf Firebase...</p>
+                </div>
+                <div class="actions">
+                    <button class="button button-primary" onclick="startExtractRun()">▶️ Run 1: Scrapen</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" id="editorCard" style="display: none;">
+            <div class="card-header"><h2 class="card-title">Inhalt</h2></div>
+            <div class="subject-grid">
+                <div class="subject-item"><div class="subject-label">Mo - EVP</div><textarea class="subject-content" id="evp1"></textarea></div>
+                <div class="subject-item"><div class="subject-label">Mo - Deutsch</div><textarea class="subject-content" id="deutsch"></textarea></div>
+                <div class="subject-item"><div class="subject-label">Mo - STDM</div><textarea class="subject-content" id="stdm"></textarea></div>
+                <div class="subject-item"><div class="subject-label">Mo - Krypt</div><textarea class="subject-content" id="kryp"></textarea></div>
+                <div class="subject-item"><div class="subject-label">Fr - GID</div><textarea class="subject-content" id="gid"></textarea></div>
+                <div class="subject-item"><div class="subject-label">Fr - Englisch</div><textarea class="subject-content" id="englisch"></textarea></div>
+                <div class="subject-item"><div class="subject-label">Fr - EVP (2)</div><textarea class="subject-content" id="evp2"></textarea></div>
+            </div>
+            <div class="actions">
+                <button class="button button-success" onclick="startSubmitRun()">✅ Run 2: Eintragen</button>
+            </div>
+        </div>
+    </div>
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

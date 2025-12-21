@@ -1,0 +1,22 @@
+name: 2. Upload to IHK
+on:
+  repository_dispatch:
+    types: [trigger-ihk-upload]
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    env:
+      IHKUSER: ${{ secrets.IHKUSER }}
+      IHKPASS: ${{ secrets.IHKPASS }}
+      AUSBILDERMAIL: ${{ secrets.AUSBILDERMAIL }}
+      ABTEILUNG: ${{ secrets.ABTEILUNG }}
+      FIREBASE_URL: ${{ secrets.FIREBASE_URL }}
+      FIREBASE_SECRET: ${{ secrets.FIREBASE_SECRET }}
+      INPUT_TEXT: ${{ github.event.client_payload.text }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test upload.spec.ts

@@ -1,0 +1,20 @@
+name: 1. Scrape WebUntis
+on:
+  schedule:
+    - cron: '0 16 * * 5' # Freitags
+  workflow_dispatch:
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    env:
+      UNITSUSER: ${{ secrets.UNITSUSER }}
+      UNITSPASS: ${{ secrets.UNITSPASS }}
+      FIREBASE_URL: ${{ secrets.FIREBASE_URL }}
+      FIREBASE_SECRET: ${{ secrets.FIREBASE_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test scrape.spec.ts
