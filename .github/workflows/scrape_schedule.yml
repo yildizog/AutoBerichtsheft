@@ -1,7 +1,7 @@
 name: 1. Scrape WebUntis
 on:
   schedule:
-    - cron: '0 16 * * 5' # Freitags
+    - cron: '0 8 * * 2' 
   workflow_dispatch:
 jobs:
   scrape:
