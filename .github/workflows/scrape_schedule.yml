@@ -17,4 +17,4 @@ jobs:
         with: { node-version: 20 }
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: npx playwright test scrape.spec.ts
+      - run: npx playwright test tests/scrape.spec.ts
