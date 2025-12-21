@@ -63,7 +63,7 @@ async function triggerAction(url, body) {
 function startExtractRun() {
     triggerAction(
         `https://api.github.com/repos/${CONFIG.GITHUB_USER}/${CONFIG.GITHUB_REPO}/actions/workflows/scrape_schedule.yml/dispatches`,
-        { ref: 'main' }
+        { ref: 'master' }
     );
 }
 
