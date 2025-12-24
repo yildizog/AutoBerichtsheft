@@ -9,6 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
+    <div id="toast-container"></div>
     <div class="container">
         
         <div id="authSection" class="hidden">
@@ -27,10 +28,13 @@
             </header>
 
             <div id="view-list">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                    <h2>Deine Berichte</h2>
-                    <button class="btn btn-primary" style="flex:0;" onclick="triggerScrape()">
-                        + Neue Woche holen (Run 1)
+                <div class="view-header">
+                    <div>
+                        <h2>Deine Berichte</h2>
+                        <p class="subtitle">Verwalte deine automatisierten Einträge</p>
+                    </div>
+                    <button class="btn-hero" onclick="triggerScrape()">
+                        <span class="icon">✨</span> Neue Woche holen
                     </button>
                 </div>
                 <ul id="reportList" class="process-list">

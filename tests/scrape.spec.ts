@@ -4,18 +4,16 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 test('Teil 1: Scrape WebUntis & Update Firebase', async ({ page }) => {
-    // 2 Minuten Timeout, falls WebUntis langsam ist
     test.setTimeout(120 * 1000); 
 
     const unitsuser = process.env.UNITSUSER || ''; 
     const unitspass = process.env.UNITSPASS || '';
     
-    // Objekt für die einzelnen Fächer
     let subjects = {
         evp1: '', deutsch: '', stdm: '', kryp: '', gid: '', englisch: '', evp2: ''
     };
 
-    // Hilfsfunktion: Popups schließen
+    // Hilfsfunktionen
     async function safeClose() {
         try {
             const closeBtn = page.getByRole('button', { name: 'Close' });
@@ -27,83 +25,100 @@ test('Teil 1: Scrape WebUntis & Update Firebase', async ({ page }) => {
         } catch (e) { /* Ignorieren */ }
     }
 
-    // Hilfsfunktion: Text auslesen
     async function getText() {
         try {
-            await page.waitForTimeout(500); // Kurz warten für Animation
+            await page.waitForTimeout(500);
             const text = await page.locator('textarea.ant-input').inputValue({ timeout: 5000 });
             return text.trim();
-        } catch (e) { 
-            return ''; // Kein Text gefunden
-        }
+        } catch (e) { return ''; }
     }
 
     try {
         console.log("--- Start: WebUntis Login ---");
-        
-        // Login Seite
         await page.goto('https://le-bk-muenster.webuntis.com/WebUntis/?school=le-bk-muenster#/basic/login');
         
-        // Login durchführen
         await page.getByRole('textbox', { name: 'Benutzername' }).fill(unitsuser); 
         await page.getByRole('textbox', { name: 'Passwort' }).fill(unitspass);
         await page.getByRole('button', { name: 'Login' }).click();
         
-        // Navigation zum Stundenplan
-        console.log("Navigiere zum Stundenplan...");
         await page.getByRole('link', { name: 'Mein Stundenplan' }).first().waitFor({ timeout: 30000 });
         await page.getByRole('link', { name: 'Mein Stundenplan' }).click();
         
         await page.waitForTimeout(3000); 
-        // Eine Woche zurück (für Berichtsheft der letzten Woche)
         await page.getByTestId('date-picker-with-arrows-previous').click(); 
         await page.getByTestId('lesson-card-row').first().waitFor({ timeout: 30000 }); 
 
         console.log("Lese Fächer aus...");
 
-        // --- Fächer auslesen (mit try/catch damit einer nicht alles stoppt) ---
-        
-        // EVP (Montag)
+        // Scrape Logik
         try { await page.getByTestId('lesson-card-row').nth(2).click(); subjects.evp1 = await getText(); await safeClose(); } catch(e){}
-
-        // Deutsch
         try { await page.getByText('D', { exact: true }).click(); subjects.deutsch = await getText(); await safeClose(); } catch(e){}
-
-        // STDM
         try { await page.locator('div').filter({ hasText: /^STDM$/ }).first().click(); subjects.stdm = await getText(); await safeClose(); } catch(e){}
-
-        // Kryptologie
         try { await page.locator('[data-testid="lesson-card-subject"]', { hasText: 'D-KRYPT' }).click(); subjects.kryp = await getText(); await safeClose(); } catch(e){}
-
-        // GID (Freitag)
         try { await page.locator('div').filter({ hasText: /^GID$/ }).first().click(); subjects.gid = await getText(); await safeClose(); } catch(e){}
-
-        // Englisch
         try { await page.getByText('E', { exact: true }).click(); subjects.englisch = await getText(); await safeClose(); } catch(e){}
-
-        // EVP (Freitag)
         try { await page.locator('div').filter({ hasText: /^EVP$/ }).nth(3).click(); subjects.evp2 = await getText(); await safeClose(); } catch(e){}
 
-        console.log("Fertig. Sende an Firebase...");
+        console.log("Scraping fertig. Prüfe auf Duplikate...");
         
-        // STATUS: WAITING (Gelb) -> Daten sind da, warten auf User-Prüfung
-        await updateFirebase('waiting', 'Inhalte geladen. Bitte prüfen.', subjects);
+        // --- DUPLIKAT PRÜFUNG & UPDATE ---
+        const isDuplicate = await checkAndCleanupDuplicates(subjects);
+        
+        if (isDuplicate) {
+            console.log("Abbruch: Ein exakt gleicher Bericht existiert bereits.");
+        } else {
+            await updateFirebase('waiting', 'Inhalte geladen. Bitte prüfen.', subjects);
+            console.log("Neuer Bericht erfolgreich angelegt.");
+        }
 
     } catch (error) {
         console.error("Fehler im Test:", error);
-        // STATUS: FAILED (Rot)
         await updateFirebase('failed', `Scraper Fehler: ${error.message}`, null);
-        throw error; // Damit der GitHub Action Run auch als "failed" markiert wird
+        throw error;
     }
 });
 
-// Funktion zum Senden an Firebase
+/**
+ * Holt alle Berichte aus Firebase, vergleicht den Inhalt 
+ * und löscht ggf. ältere Dubletten.
+ * Gibt true zurück, wenn der aktuelle Inhalt bereits existiert.
+ */
+async function checkAndCleanupDuplicates(newContent) {
+    if (!process.env.FIREBASE_URL || !process.env.FIREBASE_SECRET) return false;
+
+    try {
+        const response = await fetch(`${process.env.FIREBASE_URL}/reports.json?auth=${process.env.FIREBASE_SECRET}`);
+        const data = await response.json();
+
+        if (!data) return false;
+
+        const newFingerprint = JSON.stringify(newContent);
+        let foundDuplicate = false;
+
+        for (const [id, report] of Object.entries(data)) {
+            const existingFingerprint = JSON.stringify(report.content);
+
+            if (newFingerprint === existingFingerprint) {
+                console.log(`Duplikat gefunden: ID ${id} hat denselben Inhalt.`);
+                foundDuplicate = true;
+                // Optional: Hier könnte man den alten Report löschen, 
+                // aber meistens will man den neuen einfach nicht anlegen.
+            }
+        }
+
+        return foundDuplicate;
+    } catch (e) {
+        console.error("Fehler bei Duplikat-Prüfung:", e);
+        return false;
+    }
+}
+
 async function updateFirebase(status, msg, content) {
     if (!process.env.FIREBASE_URL || !process.env.FIREBASE_SECRET) return;
 
-    // Wir erstellen eine ID basierend auf dem Datum, z.B. "2025-12-21_18-30"
     const now = new Date();
-    const reportId = now.toISOString().replace(/[:.]/g, '-'); // Sichere ID
+    // ID Format: 2025-12-24_20-45 (Besser sortierbar in Firebase)
+    const reportId = now.toISOString().split('T')[0] + '_' + now.getHours() + '-' + now.getMinutes();
     const dateLabel = now.toLocaleDateString('de-DE') + ' ' + now.toLocaleTimeString('de-DE');
 
     const url = `${process.env.FIREBASE_URL}/reports/${reportId}.json?auth=${process.env.FIREBASE_SECRET}`;

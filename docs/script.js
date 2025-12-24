@@ -38,47 +38,55 @@ function showApp() {
 
 // --- 2. FIREBASE LISTENER & RENDER ---
 function listenToReports() {
-    // Wir hören jetzt auf 'reports' statt 'status'
     db.ref('reports').orderByChild('createdAt').on('value', (snapshot) => {
         const listEl = document.getElementById('reportList');
-        listEl.innerHTML = ''; // Liste leeren
+        listEl.innerHTML = ''; 
         allReports = {};
 
+        // Blacklist laden
+        const hiddenReports = JSON.parse(localStorage.getItem('hidden_reports') || '[]');
+
         if (!snapshot.exists()) {
-            listEl.innerHTML = '<li style="text-align:center; padding:20px;">Keine Berichte gefunden. Starte einen neuen Run!</li>';
+            listEl.innerHTML = '<li>Keine Berichte gefunden.</li>';
             return;
         }
 
-        // Firebase liefert Objekte, wir machen ein Array draus und sortieren es (neuste zuerst)
         const reportsArr = [];
         snapshot.forEach(child => {
-            reportsArr.push({ id: child.key, ...child.val() });
+            // NUR hinzufügen, wenn die ID NICHT in hiddenReports ist
+            if (!hiddenReports.includes(child.key)) {
+                reportsArr.push({ id: child.key, ...child.val() });
+            }
         });
         reportsArr.reverse(); // Neuste oben
 
         reportsArr.forEach(report => {
-            allReports[report.id] = report; // Speichern für Detailansicht
+    allReports[report.id] = report;
 
-            const li = document.createElement('li');
-            li.className = 'process-item';
-            li.onclick = () => openDetail(report.id);
-            
-            // Status Farben Logik
-            let badgeClass = 'draft';
-            let statusText = report.status;
-            if (report.status === 'waiting') { badgeClass = 'waiting'; statusText = '⚠️ Prüfung nötig'; }
-            if (report.status === 'success') { badgeClass = 'success'; statusText = '✅ Eingetragen'; }
-            if (report.status === 'failed') { badgeClass = 'failed'; statusText = '❌ Fehler'; }
+    const li = document.createElement('li');
+    li.className = 'process-item';
+    li.onclick = () => openDetail(report.id);
+    
+    let badgeClass = 'draft';
+    let statusText = report.status;
+    if (report.status === 'waiting') { badgeClass = 'waiting'; statusText = '⚠️ Prüfung'; }
+    if (report.status === 'success') { badgeClass = 'success'; statusText = '✅ Fertig'; }
+    if (report.status === 'failed') { badgeClass = 'failed'; statusText = '❌ Fehler'; }
 
-            li.innerHTML = `
-                <div class="process-info">
-                    <h3>📄 Bericht: ${report.dateLabel || report.id}</h3>
-                    <div class="process-date">Erstellt am: ${report.createdAt}</div>
-                </div>
+    li.innerHTML = `
+        <div class="process-info">
+            <div class="process-title-row">
+                <h3>📄 ${report.dateLabel || report.id}</h3>
                 <span class="badge ${badgeClass}">${statusText}</span>
-            `;
-            listEl.appendChild(li);
-        });
+            </div>
+            <div class="process-date">Erstellt: ${report.createdAt}</div>
+        </div>
+        <button class="delete-btn" onclick="deleteReport('${report.id}', event)" title="Löschen">
+            🗑️
+        </button>
+    `;
+    listEl.appendChild(li);
+});
 
         // Falls wir gerade im Detail-View sind, update auch die Felder live
         if (currentReportId && allReports[currentReportId]) {
@@ -102,6 +110,25 @@ function openDetail(id) {
     document.getElementById('view-detail').classList.remove('hidden');
     
     fillDetailView(data);
+}
+
+function deleteReport(id, event) {
+    if (event) event.stopPropagation();
+    
+    // 1. Bestehende Blacklist aus LocalStorage laden
+    let hiddenReports = JSON.parse(localStorage.getItem('hidden_reports') || '[]');
+    
+    // 2. Neue ID hinzufügen, falls noch nicht vorhanden
+    if (!hiddenReports.includes(id)) {
+        hiddenReports.push(id);
+    }
+    
+    // 3. Zurück in LocalStorage speichern
+    localStorage.setItem('hidden_reports', JSON.stringify(hiddenReports));
+    
+    // 4. UI sofort aktualisieren (einfach die Liste neu rendern)
+    // Da wir einen Live-Listener haben, triggern wir einfach ein lokales Update
+    location.reload(); // Am einfachsten, oder die render-Funktion manuell aufrufen
 }
 
 function fillDetailView(data) {
@@ -150,18 +177,37 @@ async function sendGithubDispatch(eventType, payload) {
 
 // Button: Neuer Bericht (Run 1)
 function triggerScrape() {
-    if(!confirm("Möchtest du WebUntis scrapen und einen neuen Bericht anlegen?")) return;
-    // Wir senden 'trigger-scrape', die YAML muss darauf reagieren (siehe unten)
-    // ODER wir nutzen den vorhandenen Workflow.
-    // Einfachheitshalber nutzen wir den bestehenden Schedule Workflow manuell:
+    const btn = document.querySelector('.btn-hero');
     const token = localStorage.getItem('gh_token');
+    
+    // 1. Visuellen Status aktivieren
+    btn.classList.add('loading');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = "Wird gestartet...";
+
+    showToast("GitHub Action wird ausgelöst...", "info");
+
     fetch(`https://api.github.com/repos/${CONFIG.GITHUB_USER}/${CONFIG.GITHUB_REPO}/actions/workflows/scrape_schedule.yml/dispatches`, {
         method: 'POST',
         headers: { 'Authorization': `token ${token}` },
-        body: JSON.stringify({ ref: 'master' }) // WICHTIG: Branch prüfen!
-    }).then(r => {
-        if(r.ok) alert("Scraper gestartet! Warte auf neuen Eintrag in der Liste...");
-        else alert("Fehler beim Starten");
+        body: JSON.stringify({ ref: 'master' }) 
+    })
+    .then(r => {
+        if(r.ok) {
+            showToast("Run erfolgreich gestartet!", "success");
+        } else {
+            showToast("Fehler beim Starten.", "error");
+        }
+    })
+    .catch(e => {
+        showToast("Netzwerkfehler.", "error");
+    })
+    .finally(() => {
+        // 2. Button nach 2 Sekunden wieder normal machen (Zeit für GitHub zum Verarbeiten)
+        setTimeout(() => {
+            btn.classList.remove('loading');
+            btn.innerHTML = originalText;
+        }, 2000);
     });
 }
 
@@ -185,4 +231,73 @@ function triggerUpload() {
         text: JSON.stringify(content),
         reportId: currentReportId
     });
+}
+
+// Neue Funktion für schöne Benachrichtigungen
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    // Icon Logik
+    let icon = 'ℹ️';
+    if(type === 'success') icon = '✅';
+    if(type === 'error') icon = '❌';
+
+    toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+    container.appendChild(toast);
+
+    // Nach 4 Sekunden ausfaden und entfernen
+    setTimeout(() => {
+        toast.classList.add('fade-out');
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+}
+
+// Überarbeiteter Scraper Trigger (OHNE confirm/alert)
+function triggerScrape() {
+    const token = localStorage.getItem('gh_token');
+    
+    // Visuelles Feedback sofort geben
+    showToast("Scraper wird gestartet...", "info");
+
+    fetch(`https://api.github.com/repos/${CONFIG.GITHUB_USER}/${CONFIG.GITHUB_REPO}/actions/workflows/scrape_schedule.yml/dispatches`, {
+        method: 'POST',
+        headers: { 'Authorization': `token ${token}` },
+        body: JSON.stringify({ ref: 'master' }) 
+    }).then(r => {
+        if(r.ok) {
+            showToast("Scraper läuft! Daten erscheinen gleich.", "success");
+        } else {
+            showToast("Fehler beim Starten.", "error");
+        }
+    }).catch(e => {
+        showToast("Netzwerkfehler.", "error");
+    });
+}
+
+// Überarbeiteter Github Dispatch (OHNE alert)
+async function sendGithubDispatch(eventType, payload) {
+    const token = localStorage.getItem('gh_token');
+    if(!token) return showToast("Token fehlt!", "error");
+
+    const url = `https://api.github.com/repos/${CONFIG.GITHUB_USER}/${CONFIG.GITHUB_REPO}/dispatches`;
+    
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 
+                'Authorization': `token ${token}`, 
+                'Accept': 'application/vnd.github.v3+json' 
+            },
+            body: JSON.stringify({
+                event_type: eventType,
+                client_payload: payload
+            })
+        });
+        if(!res.ok) throw new Error();
+        showToast("Befehl erfolgreich gesendet!", "success");
+    } catch(e) {
+        showToast("Fehler beim Senden.", "error");
+    }
 }
