@@ -353,3 +353,32 @@ textarea:focus {
     70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
     100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
 }
+
+.full-width-box {
+    background: var(--bg-card);
+    padding: 20px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+}
+
+.ai-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.btn-ai {
+    background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.btn-ai:hover { opacity: 0.9; transform: translateY(-1px); }
+
+/* Ladezustand für KI */
+.btn-ai.loading { filter: grayscale(1); cursor: wait; }

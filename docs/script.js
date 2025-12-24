@@ -18,17 +18,38 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function saveTokenAndLogin() {
-    const token = document.getElementById('ghTokenInput').value;
-    if (!token) return alert("Bitte Token eingeben");
-    localStorage.setItem('gh_token', token);
+    const ghToken = document.getElementById('ghTokenInput').value;
+    const geminiToken = document.getElementById('geminiTokenInput').value;
+
+    if (!ghToken || !geminiToken) {
+        return showToast("Bitte beide Keys eingeben!", "error");
+    }
+
+    localStorage.setItem('gh_token', ghToken);
+    localStorage.setItem('gemini_token', geminiToken);
+    
     document.getElementById('authSection').classList.add('hidden');
     showApp();
+    showToast("Erfolgreich eingeloggt", "success");
 }
 
 function logout() {
     localStorage.removeItem('gh_token');
+    localStorage.removeItem('gemini_token');
     location.reload();
 }
+
+// Beim Laden prüfen, ob beide Tokens da sind
+document.addEventListener('DOMContentLoaded', () => {
+    const ghToken = localStorage.getItem('gh_token');
+    const geminiToken = localStorage.getItem('gemini_token');
+    
+    if (ghToken && geminiToken) {
+        showApp();
+    } else {
+        document.getElementById('authSection').classList.remove('hidden');
+    }
+});
 
 function showApp() {
     document.getElementById('appContent').classList.remove('hidden');
@@ -299,5 +320,111 @@ async function sendGithubDispatch(eventType, payload) {
         showToast("Befehl erfolgreich gesendet!", "success");
     } catch(e) {
         showToast("Fehler beim Senden.", "error");
+    }
+}
+
+async function refineWithAI() {
+    const area = document.getElementById('workActivities');
+    const btn = document.getElementById('btnAI');
+    const input = area.value;
+    const geminiKey = localStorage.getItem('gemini_token');
+
+    if (!input) return showToast("Bitte erst Stichpunkte eingeben!", "error");
+    if (!geminiKey) return showToast("Gemini Key fehlt!", "error");
+
+    btn.classList.add('loading');
+    btn.innerHTML = "<span>⏳</span> KI arbeitet...";
+
+    try {
+        // 1. Liste Modelle auf, um den richtigen Pfad zu finden (verhindert 404)
+        const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${geminiKey}`;
+        const listRes = await fetch(listUrl);
+        const listData = await listRes.json();
+
+        if (!listData.models) throw new Error("API Key ungültig oder keine Modelle freigeschaltet.");
+
+        const activeModel = listData.models.find(m => m.name.includes('gemini-1.5-flash')) || 
+                           listData.models.find(m => m.supportedGenerationMethods.includes('generateContent'));
+
+        if (!activeModel) throw new Error("Kein passendes Modell gefunden.");
+
+        // 2. Der neue Hardprompt für strikte Stichpunkte
+        const prompt = `
+            Du bist ein Experte für IHK-Berichtshefte (Fachinformatiker). 
+            Aufgabe: Formuliere die folgenden Tätigkeiten professionell um.
+            
+            STRIKTE REGELN:
+            1. Antworte AUSSCHLIESSLICH in Stichpunkten (Bulletpoints).
+            2. Schreibe NIEMALS ganze Sätze.
+            3. Gruppiere zusammengehörige Tätigkeiten mit einer fettgedruckten Überschrift (Thema), gefolgt von den Stichpunkten.
+            4. Nutze präzise Fachterminologie.
+            
+            Beispiel für den gewünschten Stil:
+            Berichtsübersicht OKE:
+            - Vereinheitlichung des Reports (Abstände, Größen)
+            - Designverbesserung
+            - Fehlerbehebung
+            
+            Werbliche Einwilligung:
+            - Definition eines neuen Report-Designs
+            - Erstellung einer Skizze
+            
+            Eingabe des Nutzers:
+            ${input}
+        `;
+
+        const genUrl = `https://generativelanguage.googleapis.com/v1beta/${activeModel.name}:generateContent?key=${geminiKey}`;
+        
+        const response = await fetch(genUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ 
+                    parts: [{ text: prompt }] 
+                }]
+            })
+        });
+
+        const genData = await response.json();
+        if (genData.error) throw new Error(genData.error.message);
+
+        const refinedText = genData.candidates[0].content.parts[0].text;
+        
+        // Ergebnis ins Textfeld schreiben
+        area.value = refinedText.trim();
+        showToast("In Stichpunkte umgewandelt!", "success");
+
+    } catch (e) {
+        console.error("KI-Fehler:", e);
+        showToast("Fehler: " + e.message, "error");
+    } finally {
+        btn.classList.remove('loading');
+        btn.innerHTML = "<span>🪄</span> KI Überarbeiten";
+    }
+}
+
+// Fallback Funktion, falls das Flash-Modell im Account nicht aktiv ist
+async function tryFallbackAI(input, key) {
+    const area = document.getElementById('workActivities');
+    console.log("Flash nicht gefunden, versuche Fallback auf gemini-pro...");
+    
+    try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${key}`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: `Schreibe dies professionell für ein Berichtsheft um: ${input}` }] }]
+            })
+        });
+        const data = await res.json();
+        if (data.candidates) {
+            area.value = data.candidates[0].content.parts[0].text.trim();
+            showToast("Verbessert (via Fallback-Modell)", "success");
+        } else {
+            throw new Error("Kein Modell verfügbar");
+        }
+    } catch (e) {
+        showToast("Beide KI-Modelle fehlgeschlagen. Key prüfen!", "error");
     }
 }

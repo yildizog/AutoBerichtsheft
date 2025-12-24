@@ -3,22 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Berichtsheft Manager</title>
+    <title>AutoBerichtsheft Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
+
     <div id="toast-container"></div>
+
     <div class="container">
-        
         <div id="authSection" class="hidden">
-            <div class="auth-card">
-                <h2>🔐 Login</h2>
-                <p style="color:#888; font-size:14px; margin-top:5px;">Bitte GitHub Personal Access Token eingeben</p>
-                <input type="password" id="ghTokenInput" class="token-input" placeholder="ghp_...">
-                <button class="btn btn-primary" onclick="saveTokenAndLogin()">Speichern & Starten</button>
-            </div>
+    <div class="auth-card">
+        <h2>🔐 Login & Setup</h2>
+        <p style="color:var(--text-muted); font-size:14px; margin-top:5px;">Bitte die erforderlichen Keys eingeben</p>
+        
+        <label class="subject-label" style="text-align:left; margin-top:15px;">GitHub Access Token</label>
+        <input type="password" id="ghTokenInput" class="token-input" placeholder="ghp_...">
+        
+        <label class="subject-label" style="text-align:left; margin-top:10px;">Gemini AI API Key</label>
+        <input type="password" id="geminiTokenInput" class="token-input" placeholder="AIzaSy...">
+        
+        <button class="btn-hero" style="width:100%; justify-content:center; margin-top:20px;" onclick="saveTokenAndLogin()">
+            Speichern & Starten
+        </button>
+        <p style="font-size:11px; color:var(--text-muted); margin-top:15px;">
+            Die Keys werden nur lokal in deinem Browser gespeichert.
+        </p>
+    </div>
+</div>
         </div>
 
         <div id="appContent" class="hidden">
@@ -34,11 +48,11 @@
                         <p class="subtitle">Verwalte deine automatisierten Einträge</p>
                     </div>
                     <button class="btn-hero" onclick="triggerScrape()">
-                        <span class="icon">✨</span> Neue Woche holen
+                        <span>✨</span> Neue Woche holen
                     </button>
                 </div>
                 <ul id="reportList" class="process-list">
-                    <li style="text-align:center; color:#666;">Lade Daten...</li>
+                    <li style="text-align:center; color:var(--text-muted); padding:40px;">Lade Daten aus Firebase...</li>
                 </ul>
             </div>
 
@@ -51,6 +65,7 @@
                     </div>
                 </div>
 
+                <h3 style="margin-bottom:15px; font-size:16px; color:var(--accent);">🏫 Berufsschule (WebUntis Daten)</h3>
                 <div class="subject-grid">
                     <div class="subject-box"><span class="subject-label">Montag - EVP</span><textarea id="evp1"></textarea></div>
                     <div class="subject-box"><span class="subject-label">Montag - Deutsch</span><textarea id="deutsch"></textarea></div>
@@ -61,12 +76,22 @@
                     <div class="subject-box"><span class="subject-label">Freitag - EVP (2)</span><textarea id="evp2"></textarea></div>
                 </div>
 
+                <div class="full-width-box" style="margin-top: 25px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <span class="subject-label" style="margin-bottom:0;">🛠️ Betriebliche Tätigkeiten</span>
+                        <button id="btnAI" class="btn-ai" onclick="refineWithAI()">
+                            <span>🪄</span> KI Überarbeiten
+                        </button>
+                    </div>
+                    <textarea id="workActivities" placeholder="Stichpunkte hier eingeben und KI nutzen..." style="min-height: 150px;"></textarea>
+                </div>
+
                 <div class="action-bar">
                     <button id="btnUpload" class="btn btn-success" onclick="triggerUpload()">
-                        ✅ Ins IHK Portal eintragen (Run 2)
+                        🚀 Ins IHK Portal eintragen (Run 2 starten)
                     </button>
                 </div>
-                <p id="detailLog" style="margin-top:10px; font-family:monospace; font-size:12px; color:#666;"></p>
+                <p id="detailLog" style="margin-top:15px; font-family:monospace; font-size:12px; color:var(--text-muted); text-align:center;"></p>
             </div>
         </div>
     </div>
