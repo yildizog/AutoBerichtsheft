@@ -44,3 +44,45 @@ textarea { width: 100%; background: var(--bg-input); border: 1px solid var(--bor
 .badge { padding: 4px 8px; border-radius: 6px; font-size: 10px; font-weight: bold; text-transform: uppercase; }
 .badge.success { background: rgba(16, 185, 129, 0.2); color: #10b981; }
 .badge.in_progress { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+/* Live-Schritte innerhalb der Run-Card */
+.job-steps {
+    margin-top: 10px;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+}
+
+.live-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #fbbf24; /* Warn-Gelb für aktive Schritte */
+}
+
+/* Der pulsierende Punkt */
+.pulse-dot {
+    width: 8px;
+    height: 8px;
+    background-color: #fbbf24;
+    border-radius: 50%;
+    display: inline-block;
+    animation: pulse-dot 1.5s infinite;
+}
+
+@keyframes pulse-dot {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(251, 191, 36, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
+}
+
+/* Optimierung der Run-Card */
+.run-card.in_progress {
+    border-color: #fbbf24;
+    background: rgba(251, 191, 36, 0.05);
+}
+
+.run-card.completed {
+    border-color: #10b981;
+}
