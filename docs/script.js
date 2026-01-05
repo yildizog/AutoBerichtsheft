@@ -232,6 +232,78 @@ function triggerScrape() {
     });
 }
 
+async function refineSchoolWithAI() {
+    const geminiKey = localStorage.getItem('gemini_token');
+    const btn = document.getElementById('btnAISchool');
+    
+    // Alle Felder identifizieren
+    const fields = ['evp1', 'deutsch', 'stdm', 'kryp', 'gid', 'englisch', 'evp2'];
+    const fieldElements = fields.map(id => document.getElementById(id));
+    
+    // Daten sammeln
+    const currentData = fields.reduce((acc, id) => {
+        acc[id] = document.getElementById(id).value;
+        return acc;
+    }, {});
+
+    if (!geminiKey) return showToast("Gemini Key fehlt!", "error");
+    
+    btn.classList.add('loading');
+    btn.innerHTML = "<span>⏳</span> Korrigiere...";
+
+    try {
+        const prompt = `
+            Du bist ein Korrektur-Assistent für IHK-Berichtshefte. 
+            Aufgabe: Korrigiere Rechtschreibung, Grammatik und formatiere die Inhalte fachlich präzise.
+            
+            REGELN:
+            1. Antworte AUSSCHLIESSLICH im JSON-Format.
+            2. Behalte die Schlüsselnamen bei.
+            3. Formuliere Stichpunkte professionell (z.B. statt "haben wir gemacht" -> "Durchführung von...").
+            
+            Eingabe-Daten:
+            ${JSON.stringify(currentData)}
+            
+            Deine Antwort muss EXAKT so aussehen:
+            {
+              "evp1": "korrigierter text",
+              "deutsch": "korrigierter text",
+              ...
+            }
+        `;
+
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`;
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { response_mime_type: "application/json" } // Zwingt Gemini zu JSON
+            })
+        });
+
+        const data = await response.json();
+        const cleanedText = data.candidates[0].content.parts[0].text;
+        const correctedJson = JSON.parse(cleanedText);
+
+        // Felder mit korrigierten Daten füllen
+        fields.forEach(id => {
+            if (correctedJson[id]) {
+                document.getElementById(id).value = correctedJson[id];
+            }
+        });
+
+        showToast("Schulinhalte wurden korrigiert & formatiert!", "success");
+
+    } catch (e) {
+        console.error("KI-Fehler:", e);
+        showToast("Fehler bei der Korrektur: " + e.message, "error");
+    } finally {
+        btn.classList.remove('loading');
+        btn.innerHTML = "<span>🪄</span> Schulinhalt korrigieren";
+    }
+}
 // Button: Upload (Run 2)
 function triggerUpload() {
     if(!currentReportId) return;

@@ -367,6 +367,19 @@ textarea:focus {
     gap: 10px;
 }
 
+.btn-ai.loading {
+    filter: grayscale(0.5);
+    opacity: 0.8;
+    pointer-events: none;
+    position: relative;
+}
+
+/* Optional: Ein sanfter Glow-Effekt für die KI-Buttons */
+.btn-ai {
+    box-shadow: 0 0 10px rgba(124, 58, 237, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 .btn-ai {
     background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
     color: white;
