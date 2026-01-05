@@ -4,6 +4,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 test('Teil 1: Scrape WebUntis & Update Firebase', async ({ page }) => {
+    // Globales Timeout für den gesamten Test
     test.setTimeout(120 * 1000); 
 
     const unitsuser = process.env.UNITSUSER || ''; 
@@ -13,7 +14,9 @@ test('Teil 1: Scrape WebUntis & Update Firebase', async ({ page }) => {
         evp1: '', deutsch: '', stdm: '', kryp: '', gid: '', englisch: '', evp2: ''
     };
 
-    // Hilfsfunktionen
+    // --- HILFSFUNKTIONEN ---
+
+    // Schließt den Dialog (entweder via Button oder Escape)
     async function safeClose() {
         try {
             const closeBtn = page.getByRole('button', { name: 'Close' });
@@ -25,6 +28,7 @@ test('Teil 1: Scrape WebUntis & Update Firebase', async ({ page }) => {
         } catch (e) { /* Ignorieren */ }
     }
 
+    // Extrahiert den Text aus dem Textfeld
     async function getText() {
         try {
             await page.waitForTimeout(500);
@@ -32,6 +36,28 @@ test('Teil 1: Scrape WebUntis & Update Firebase', async ({ page }) => {
             return text.trim();
         } catch (e) { return ''; }
     }
+
+    // NEU: Versucht eine Karte zu klicken. Falls Timeout (5s), wird '' zurückgegeben.
+    async function scrapeSubjectContent(locator) {
+        try {
+            // Versuche das Fach anzuklicken (Timeout 5 Sekunden)
+            await locator.click({ timeout: 5000 });
+            
+            // Text auslesen
+            const content = await getText();
+            
+            // Dialog wieder schließen
+            await safeClose();
+            
+            return content;
+        } catch (e) {
+            console.warn(`Hinweis: Ein Fach konnte nicht geöffnet werden oder war nicht klickbar. Überspringe...`);
+            await safeClose(); // Sicherstellen, dass alles zu ist für das nächste Fach
+            return ''; // Falls Fehler, bleibt das Fach leer
+        }
+    }
+
+    // --- TEST ABLAUF ---
 
     try {
         console.log("--- Start: WebUntis Login ---");
@@ -50,14 +76,14 @@ test('Teil 1: Scrape WebUntis & Update Firebase', async ({ page }) => {
 
         console.log("Lese Fächer aus...");
 
-        // Scrape Logik
-        try { await page.getByTestId('lesson-card-row').nth(2).click(); subjects.evp1 = await getText(); await safeClose(); } catch(e){}
-        try { await page.getByText('D', { exact: true }).click(); subjects.deutsch = await getText(); await safeClose(); } catch(e){}
-        try { await page.locator('div').filter({ hasText: /^STDM$/ }).first().click(); subjects.stdm = await getText(); await safeClose(); } catch(e){}
-        try { await page.locator('[data-testid="lesson-card-subject"]', { hasText: 'D-KRYPT' }).click(); subjects.kryp = await getText(); await safeClose(); } catch(e){}
-        try { await page.locator('div').filter({ hasText: /^GID$/ }).first().click(); subjects.gid = await getText(); await safeClose(); } catch(e){}
-        try { await page.getByText('E', { exact: true }).click(); subjects.englisch = await getText(); await safeClose(); } catch(e){}
-        try { await page.locator('div').filter({ hasText: /^EVP$/ }).nth(3).click(); subjects.evp2 = await getText(); await safeClose(); } catch(e){}
+        // Einzelne Fächer mit der neuen Sicherheitsfunktion abrufen
+        subjects.evp1 = await scrapeSubjectContent(page.getByTestId('lesson-card-row').nth(2));
+        subjects.deutsch = await scrapeSubjectContent(page.getByText('D', { exact: true }));
+        subjects.stdm = await scrapeSubjectContent(page.locator('div').filter({ hasText: /^STDM$/ }).first());
+        subjects.kryp = await scrapeSubjectContent(page.locator('[data-testid="lesson-card-subject"]', { hasText: 'D-KRYPT' }));
+        subjects.gid = await scrapeSubjectContent(page.locator('div').filter({ hasText: /^GID$/ }).first());
+        subjects.englisch = await scrapeSubjectContent(page.getByText('E', { exact: true }));
+        subjects.evp2 = await scrapeSubjectContent(page.locator('div').filter({ hasText: /^EVP$/ }).nth(3));
 
         console.log("Scraping fertig. Prüfe auf Duplikate...");
         
@@ -78,11 +104,8 @@ test('Teil 1: Scrape WebUntis & Update Firebase', async ({ page }) => {
     }
 });
 
-/**
- * Holt alle Berichte aus Firebase, vergleicht den Inhalt 
- * und löscht ggf. ältere Dubletten.
- * Gibt true zurück, wenn der aktuelle Inhalt bereits existiert.
- */
+// --- FIREBASE FUNKTIONEN ---
+
 async function checkAndCleanupDuplicates(newContent) {
     if (!process.env.FIREBASE_URL || !process.env.FIREBASE_SECRET) return false;
 
@@ -101,11 +124,8 @@ async function checkAndCleanupDuplicates(newContent) {
             if (newFingerprint === existingFingerprint) {
                 console.log(`Duplikat gefunden: ID ${id} hat denselben Inhalt.`);
                 foundDuplicate = true;
-                // Optional: Hier könnte man den alten Report löschen, 
-                // aber meistens will man den neuen einfach nicht anlegen.
             }
         }
-
         return foundDuplicate;
     } catch (e) {
         console.error("Fehler bei Duplikat-Prüfung:", e);
@@ -117,7 +137,6 @@ async function updateFirebase(status, msg, content) {
     if (!process.env.FIREBASE_URL || !process.env.FIREBASE_SECRET) return;
 
     const now = new Date();
-    // ID Format: 2025-12-24_20-45 (Besser sortierbar in Firebase)
     const reportId = now.toISOString().split('T')[0] + '_' + now.getHours() + '-' + now.getMinutes();
     const dateLabel = now.toLocaleDateString('de-DE') + ' ' + now.toLocaleTimeString('de-DE');
 
