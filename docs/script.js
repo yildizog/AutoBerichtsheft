@@ -232,53 +232,50 @@ function triggerScrape() {
     });
 }
 
+// Hilfsfunktion: Alle Checkboxen an/aus
+function toggleAllSubjects(isChecked) {
+    document.querySelectorAll('.subject-select').forEach(cb => {
+        cb.checked = isChecked;
+    });
+}
+
 async function refineSchoolWithAI() {
     const geminiKey = localStorage.getItem('gemini_token');
     const btn = document.getElementById('btnAISchool');
     
-    // 1. Felder definieren
-    const fields = ['evp1', 'deutsch', 'stdm', 'kryp', 'gid', 'englisch', 'evp2'];
-    const currentData = {};
-    
-    let hasContent = false;
-    fields.forEach(id => {
-        const val = document.getElementById(id).value;
-        currentData[id] = val;
-        if(val.trim() !== "") hasContent = true;
+    // 1. Nur IDs von CHECKED Boxen holen
+    const selectedBoxes = document.querySelectorAll('.subject-select:checked');
+    const selectedIds = Array.from(selectedBoxes).map(cb => cb.getAttribute('data-id'));
+
+    if (selectedIds.length === 0) {
+        return showToast("Bitte wähle mindestens ein Fach aus!", "error");
+    }
+
+    // 2. Daten nur der selektierten Felder sammeln
+    const dataToRefine = {};
+    selectedIds.forEach(id => {
+        dataToRefine[id] = document.getElementById(id).value;
     });
 
-    if (!hasContent) return showToast("Die Schulfelder sind leer!", "error");
     if (!geminiKey) return showToast("Gemini Key fehlt!", "error");
     
     btn.classList.add('loading');
-    btn.innerHTML = "<span>⏳</span> Korrigiere...";
+    btn.innerHTML = "<span>⏳</span> KI arbeitet...";
 
     try {
-        // 2. Dynamische Modell-Suche (verhindert 404)
+        // Modell-Discovery (wie gehabt)
         const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${geminiKey}`;
         const listRes = await fetch(listUrl);
         const listData = await listRes.json();
-
-        if (!listData.models) throw new Error("API Key ungültig.");
-
-        // Suche erst Flash, dann Pro, sonst das erste verfügbare Modell
-        const activeModel = listData.models.find(m => m.name.includes('gemini-1.5-flash')) || 
-                           listData.models.find(m => m.name.includes('gemini-pro')) ||
-                           listData.models[0];
+        const activeModel = listData.models.find(m => m.name.includes('gemini-1.5-flash')) || listData.models[0];
 
         const prompt = `
-            Du bist ein Experte für IHK-Berichtshefte. 
-            Aufgabe: Korrigiere und formatiere die Schulinhalte professionell.
-            
-            STRIKTE REGELN:
-            1. Antworte NUR im JSON-Format. Keine Einleitung, kein "Hier ist das Ergebnis".
-            2. Nutze präzise Fachwörter.
-            3. Bleibe bei Stichpunkten, keine ganzen Sätze.
-            
-            Daten: ${JSON.stringify(currentData)}
+            Du bist ein Korrektur-Assistent für Fachinformatiker.
+            Aufgabe: Optimiere die folgenden Schulinhalte professionell. 
+            Antworte NUR mit validem JSON.
+            Daten: ${JSON.stringify(dataToRefine)}
         `;
 
-        // 3. API Call mit korrektem Modell-Pfad
         const genUrl = `https://generativelanguage.googleapis.com/v1beta/${activeModel.name}:generateContent?key=${geminiKey}`;
         
         const response = await fetch(genUrl, {
@@ -286,43 +283,31 @@ async function refineSchoolWithAI() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: {
-                    // Falls das Modell JSON-Mode unterstützt, erzwingen wir es hier
-                    response_mime_type: "application/json" 
-                }
+                generationConfig: { response_mime_type: "application/json" }
             })
         });
 
         const data = await response.json();
-
-        // 4. Sicherheits-Check (Verhindert den '0' Fehler)
-        if (!data.candidates || !data.candidates[0]) {
-            console.error("API Fehler Details:", data);
-            throw new Error(data.error?.message || "Keine Antwort von KI erhalten");
-        }
+        if (!data.candidates) throw new Error("Keine Antwort erhalten");
 
         let cleanedText = data.candidates[0].content.parts[0].text;
-        
-        // Manchmal packt die KI das JSON in Markdown-Code-Blocks (```json ... ```)
         cleanedText = cleanedText.replace(/```json|```/g, "").trim();
-        
         const correctedJson = JSON.parse(cleanedText);
 
-        // 5. Felder füllen
-        fields.forEach(id => {
-            if (correctedJson[id]) {
-                document.getElementById(id).value = correctedJson[id];
-            }
+        // 3. Nur die selektierten Felder zurückschreiben
+        Object.keys(correctedJson).forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = correctedJson[id];
         });
 
-        showToast("Schulinhalte optimiert!", "success");
+        showToast(`${Object.keys(correctedJson).length} Fächer optimiert!`, "success");
 
     } catch (e) {
         console.error("KI-Fehler:", e);
         showToast("Fehler: " + e.message, "error");
     } finally {
         btn.classList.remove('loading');
-        btn.innerHTML = "<span>🪄</span> Schulinhalt korrigieren";
+        btn.innerHTML = "<span>🪄</span> Selektierte korrigieren";
     }
 }
 
