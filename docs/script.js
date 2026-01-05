@@ -236,74 +236,96 @@ async function refineSchoolWithAI() {
     const geminiKey = localStorage.getItem('gemini_token');
     const btn = document.getElementById('btnAISchool');
     
-    // Alle Felder identifizieren
+    // 1. Felder definieren
     const fields = ['evp1', 'deutsch', 'stdm', 'kryp', 'gid', 'englisch', 'evp2'];
-    const fieldElements = fields.map(id => document.getElementById(id));
+    const currentData = {};
     
-    // Daten sammeln
-    const currentData = fields.reduce((acc, id) => {
-        acc[id] = document.getElementById(id).value;
-        return acc;
-    }, {});
+    let hasContent = false;
+    fields.forEach(id => {
+        const val = document.getElementById(id).value;
+        currentData[id] = val;
+        if(val.trim() !== "") hasContent = true;
+    });
 
+    if (!hasContent) return showToast("Die Schulfelder sind leer!", "error");
     if (!geminiKey) return showToast("Gemini Key fehlt!", "error");
     
     btn.classList.add('loading');
     btn.innerHTML = "<span>⏳</span> Korrigiere...";
 
     try {
+        // 2. Dynamische Modell-Suche (verhindert 404)
+        const listUrl = `https://generativelanguage.googleapis.com/v1beta/models?key=${geminiKey}`;
+        const listRes = await fetch(listUrl);
+        const listData = await listRes.json();
+
+        if (!listData.models) throw new Error("API Key ungültig.");
+
+        // Suche erst Flash, dann Pro, sonst das erste verfügbare Modell
+        const activeModel = listData.models.find(m => m.name.includes('gemini-1.5-flash')) || 
+                           listData.models.find(m => m.name.includes('gemini-pro')) ||
+                           listData.models[0];
+
         const prompt = `
-            Du bist ein Korrektur-Assistent für IHK-Berichtshefte. 
-            Aufgabe: Korrigiere Rechtschreibung, Grammatik und formatiere die Inhalte fachlich präzise.
+            Du bist ein Experte für IHK-Berichtshefte. 
+            Aufgabe: Korrigiere und formatiere die Schulinhalte professionell.
             
-            REGELN:
-            1. Antworte AUSSCHLIESSLICH im JSON-Format.
-            2. Behalte die Schlüsselnamen bei.
-            3. Formuliere Stichpunkte professionell (z.B. statt "haben wir gemacht" -> "Durchführung von...").
+            STRIKTE REGELN:
+            1. Antworte NUR im JSON-Format. Keine Einleitung, kein "Hier ist das Ergebnis".
+            2. Nutze präzise Fachwörter.
+            3. Bleibe bei Stichpunkten, keine ganzen Sätze.
             
-            Eingabe-Daten:
-            ${JSON.stringify(currentData)}
-            
-            Deine Antwort muss EXAKT so aussehen:
-            {
-              "evp1": "korrigierter text",
-              "deutsch": "korrigierter text",
-              ...
-            }
+            Daten: ${JSON.stringify(currentData)}
         `;
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`;
+        // 3. API Call mit korrektem Modell-Pfad
+        const genUrl = `https://generativelanguage.googleapis.com/v1beta/${activeModel.name}:generateContent?key=${geminiKey}`;
         
-        const response = await fetch(url, {
+        const response = await fetch(genUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: { response_mime_type: "application/json" } // Zwingt Gemini zu JSON
+                generationConfig: {
+                    // Falls das Modell JSON-Mode unterstützt, erzwingen wir es hier
+                    response_mime_type: "application/json" 
+                }
             })
         });
 
         const data = await response.json();
-        const cleanedText = data.candidates[0].content.parts[0].text;
+
+        // 4. Sicherheits-Check (Verhindert den '0' Fehler)
+        if (!data.candidates || !data.candidates[0]) {
+            console.error("API Fehler Details:", data);
+            throw new Error(data.error?.message || "Keine Antwort von KI erhalten");
+        }
+
+        let cleanedText = data.candidates[0].content.parts[0].text;
+        
+        // Manchmal packt die KI das JSON in Markdown-Code-Blocks (```json ... ```)
+        cleanedText = cleanedText.replace(/```json|```/g, "").trim();
+        
         const correctedJson = JSON.parse(cleanedText);
 
-        // Felder mit korrigierten Daten füllen
+        // 5. Felder füllen
         fields.forEach(id => {
             if (correctedJson[id]) {
                 document.getElementById(id).value = correctedJson[id];
             }
         });
 
-        showToast("Schulinhalte wurden korrigiert & formatiert!", "success");
+        showToast("Schulinhalte optimiert!", "success");
 
     } catch (e) {
         console.error("KI-Fehler:", e);
-        showToast("Fehler bei der Korrektur: " + e.message, "error");
+        showToast("Fehler: " + e.message, "error");
     } finally {
         btn.classList.remove('loading');
         btn.innerHTML = "<span>🪄</span> Schulinhalt korrigieren";
     }
 }
+
 // Button: Upload (Run 2)
 function triggerUpload() {
     if(!currentReportId) return;
