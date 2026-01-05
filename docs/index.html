@@ -17,98 +17,79 @@
         <div id="authSection" class="hidden">
             <div class="auth-card">
                 <h2>🔐 Login & Setup</h2>
-                <p style="color:var(--text-muted); font-size:14px; margin-top:5px;">Bitte die erforderlichen Keys eingeben</p>
-                
-                <input type="password" id="ghTokenInput" class="token-input" placeholder="GitHub Token (ghp_...)">
-                <input type="password" id="geminiTokenInput" class="token-input" placeholder="Gemini API Key (AIza...)">
-                
-                <button class="btn-hero" style="width:100%; justify-content:center;" onclick="saveTokenAndLogin()">
-                    Speichern & Starten
-                </button>
+                <input type="password" id="ghTokenInput" class="token-input" placeholder="GitHub Token">
+                <input type="password" id="geminiTokenInput" class="token-input" placeholder="Gemini API Key">
+                <button class="btn-hero" style="width:100%" onclick="saveTokenAndLogin()">Starten</button>
             </div>
         </div>
 
         <div id="appContent" class="hidden">
             <header>
                 <h1>📚 Berichtsheft Manager</h1>
-                <button class="logout-btn" onclick="logout()">Token löschen</button>
+                <button class="logout-btn" onclick="logout()">Logout</button>
             </header>
 
             <div id="view-list">
                 <div class="view-header">
-                    <div>
-                        <h2>Deine Berichte</h2>
-                        <p class="subtitle">Verwalte deine automatisierten Einträge</p>
-                    </div>
-                    <button class="btn-hero" onclick="triggerScrape()">
-                        <span>✨</span> Neue Woche holen
-                    </button>
+                    <h2>Deine Berichte</h2>
+                    <button class="btn-hero" onclick="triggerScrape()">✨ Neue Woche holen</button>
                 </div>
                 <ul id="reportList" class="process-list">
-                    <li style="text-align:center; color:var(--text-muted); padding:40px;">Lade Daten aus Firebase...</li>
+                    <li>Lade Daten...</li>
                 </ul>
             </div>
 
             <div id="view-detail" class="hidden">
                 <div class="detail-header">
                     <button class="back-btn" onclick="showList()">←</button>
-                    <div>
-                        <h2 id="detailTitle">Woche vom ...</h2>
-                        <span id="detailStatus" class="badge draft">Lade...</span>
-                    </div>
+                    <h2 id="detailTitle">Woche vom ...</h2>
+                    <span id="detailStatus" class="badge">Lade...</span>
                 </div>
 
-                <div class="section-container">
-                    <div class="section-header">
-                        <div class="header-left">
-                            <h3 class="section-title">🏫 Berufsschule</h3>
-                            <label class="select-all-label">
-                                <input type="checkbox" id="selectAllSubjects" checked onclick="toggleAllSubjects(this.checked)"> 
-                                <span>Alle</span>
-                            </label>
-                        </div>
-                        <button id="btnAISchool" class="btn-ai btn-secondary" onclick="refineSchoolWithAI()">
-                            <span>🪄</span> Selektierte korrigieren
-                        </button>
+                <div class="section-header" style="margin-top:20px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <h3 class="section-title">🏫 Berufsschule</h3>
+                        <label class="select-all-label">
+                            <input type="checkbox" id="selectAllSubjects" checked onclick="toggleAllSubjects(this.checked)"> Alle
+                        </label>
                     </div>
+                    <button id="btnAISchool" class="btn-ai green" onclick="refineSchoolWithAI()">🪄 KI Korrektur</button>
+                </div>
 
-                    <div class="day-group">
-                        <h4>Montag</h4>
-                        <div class="subject-grid">
-                            <div class="subject-box">
-                                <div class="box-header"><span>EVP</span><input type="checkbox" class="subject-select" data-id="evp1" checked></div>
-                                <textarea id="evp1"></textarea>
-                            </div>
-                            <div class="subject-box">
-                                <div class="box-header"><span>Deutsch</span><input type="checkbox" class="subject-select" data-id="deutsch" checked></div>
-                                <textarea id="deutsch"></textarea>
-                            </div>
-                            <div class="subject-box">
-                                <div class="box-header"><span>STDM</span><input type="checkbox" class="subject-select" data-id="stdm" checked></div>
-                                <textarea id="stdm"></textarea>
-                            </div>
-                            <div class="subject-box">
-                                <div class="box-header"><span>Kryptologie</span><input type="checkbox" class="subject-select" data-id="kryp" checked></div>
-                                <textarea id="kryp"></textarea>
-                            </div>
+                <div class="days-wrapper">
+                    <div class="day-column">
+                        <h4 class="day-title">Montag</h4>
+                        <div class="subject-box">
+                            <div class="box-header"><span>EVP</span><input type="checkbox" class="subject-select" data-id="evp1" checked></div>
+                            <textarea id="evp1"></textarea>
+                        </div>
+                        <div class="subject-box">
+                            <div class="box-header"><span>Deutsch</span><input type="checkbox" class="subject-select" data-id="deutsch" checked></div>
+                            <textarea id="deutsch"></textarea>
+                        </div>
+                        <div class="subject-box">
+                            <div class="box-header"><span>STDM</span><input type="checkbox" class="subject-select" data-id="stdm" checked></div>
+                            <textarea id="stdm"></textarea>
+                        </div>
+                        <div class="subject-box">
+                            <div class="box-header"><span>Kryptologie</span><input type="checkbox" class="subject-select" data-id="kryp" checked></div>
+                            <textarea id="kryp"></textarea>
                         </div>
                     </div>
 
-                    <div class="day-group">
-                        <h4>Freitag</h4>
-                        <div class="subject-grid">
-                            <div class="subject-box">
-                                <div class="box-header"><span>GID</span><input type="checkbox" class="subject-select" data-id="gid" checked></div>
-                                <textarea id="gid"></textarea>
-                            </div>
-                            <div class="subject-box">
-                                <div class="box-header"><span>Englisch</span><input type="checkbox" class="subject-select" data-id="englisch" checked></div>
-                                <textarea id="englisch"></textarea>
-                            </div>
-                            <div class="subject-box">
-                                <div class="box-header"><span>EVP (2)</span><input type="checkbox" class="subject-select" data-id="evp2" checked></div>
-                                <textarea id="evp2"></textarea>
-                            </div>
+                    <div class="day-column">
+                        <h4 class="day-title">Freitag</h4>
+                        <div class="subject-box">
+                            <div class="box-header"><span>GID</span><input type="checkbox" class="subject-select" data-id="gid" checked></div>
+                            <textarea id="gid"></textarea>
+                        </div>
+                        <div class="subject-box">
+                            <div class="box-header"><span>Englisch</span><input type="checkbox" class="subject-select" data-id="englisch" checked></div>
+                            <textarea id="englisch"></textarea>
+                        </div>
+                        <div class="subject-box">
+                            <div class="box-header"><span>EVP (2)</span><input type="checkbox" class="subject-select" data-id="evp2" checked></div>
+                            <textarea id="evp2"></textarea>
                         </div>
                     </div>
                 </div>
@@ -116,17 +97,13 @@
                 <div class="full-width-box">
                     <div class="section-header">
                         <h3 class="section-title">🛠️ Betriebliche Tätigkeiten</h3>
-                        <button id="btnAI" class="btn-ai" onclick="refineWithAI()">
-                            <span>🪄</span> KI Überarbeiten
-                        </button>
+                        <button id="btnAI" class="btn-ai" onclick="refineWithAI()">🪄 KI Überarbeiten</button>
                     </div>
                     <textarea id="workActivities" placeholder="Stichpunkte hier eingeben..."></textarea>
                 </div>
 
                 <div class="action-bar">
-                    <button id="btnUpload" class="btn btn-success" onclick="triggerUpload()">
-                        🚀 Ins IHK Portal eintragen
-                    </button>
+                    <button id="btnUpload" class="btn-success" onclick="triggerUpload()">🚀 Ins IHK Portal eintragen</button>
                     <p id="detailLog"></p>
                 </div>
             </div>
