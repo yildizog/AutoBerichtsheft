@@ -67,21 +67,28 @@
                     <button id="btnAISchool" class="btn-ai btn-secondary" onclick="refineSchoolWithAI()">🪄 KI Korrektur</button>
                 </div>
 
-                <div class="days-wrapper">
-                    <div class="day-column">
+            <div class="days-wrapper">
+                <div class="day-column">
+                    <div class="day-header">
                         <h4 class="day-title">Montag</h4>
-                        <div class="subject-box"><div class="box-header"><span>EVP</span><input type="checkbox" class="subject-select" data-id="evp1" checked></div><textarea id="evp1"></textarea></div>
-                        <div class="subject-box"><div class="box-header"><span>Deutsch</span><input type="checkbox" class="subject-select" data-id="deutsch" checked></div><textarea id="deutsch"></textarea></div>
-                        <div class="subject-box"><div class="box-header"><span>STDM</span><input type="checkbox" class="subject-select" data-id="stdm" checked></div><textarea id="stdm"></textarea></div>
-                        <div class="subject-box"><div class="box-header"><span>Kryptologie</span><input type="checkbox" class="subject-select" data-id="kryp" checked></div><textarea id="kryp"></textarea></div>
+                        <button class="btn-sick" onclick="setSick('montag')">🤒 Krank</button>
                     </div>
-                    <div class="day-column">
-                        <h4 class="day-title">Freitag</h4>
-                        <div class="subject-box"><div class="box-header"><span>GID</span><input type="checkbox" class="subject-select" data-id="gid" checked></div><textarea id="gid"></textarea></div>
-                        <div class="subject-box"><div class="box-header"><span>Englisch</span><input type="checkbox" class="subject-select" data-id="englisch" checked></div><textarea id="englisch"></textarea></div>
-                        <div class="subject-box"><div class="box-header"><span>EVP (2)</span><input type="checkbox" class="subject-select" data-id="evp2" checked></div><textarea id="evp2"></textarea></div>
-                    </div>
+                    <div class="subject-box"><div class="box-header"><span>EVP</span><input type="checkbox" class="subject-select" data-id="evp1" checked></div><textarea id="evp1"></textarea></div>
+                    <div class="subject-box"><div class="box-header"><span>Deutsch</span><input type="checkbox" class="subject-select" data-id="deutsch" checked></div><textarea id="deutsch"></textarea></div>
+                    <div class="subject-box"><div class="box-header"><span>STDM</span><input type="checkbox" class="subject-select" data-id="stdm" checked></div><textarea id="stdm"></textarea></div>
+                    <div class="subject-box"><div class="box-header"><span>Kryptologie</span><input type="checkbox" class="subject-select" data-id="kryp" checked></div><textarea id="kryp"></textarea></div>
                 </div>
+
+                <div class="day-column">
+                    <div class="day-header">
+                        <h4 class="day-title">Freitag</h4>
+                        <button class="btn-sick" onclick="setSick('freitag')">🤒 Krank</button>
+                    </div>
+                    <div class="subject-box"><div class="box-header"><span>GID</span><input type="checkbox" class="subject-select" data-id="gid" checked></div><textarea id="gid"></textarea></div>
+                    <div class="subject-box"><div class="box-header"><span>Englisch</span><input type="checkbox" class="subject-select" data-id="englisch" checked></div><textarea id="englisch"></textarea></div>
+                    <div class="subject-box"><div class="box-header"><span>EVP (2)</span><input type="checkbox" class="subject-select" data-id="evp2" checked></div><textarea id="evp2"></textarea></div>
+                </div>
+            </div>
 
                 <div class="full-width-box">
                     <div class="section-header">

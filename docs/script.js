@@ -168,3 +168,29 @@ function triggerUpload() {
         body: JSON.stringify({ event_type: 'trigger-ihk-upload', client_payload: { text: JSON.stringify(content), reportId: currentReportId } })
     }).then(() => { alert("Upload-Action gesendet!"); setTimeout(fetchGithubRuns, 2000); });
 }
+
+function setSick(day) {
+    const confirmSick = confirm(`Möchtest du alle Fächer für ${day === 'montag' ? 'Montag' : 'Freitag'} auf "Krank" setzen?`);
+    
+    if (confirmSick) {
+        let targets = [];
+        if (day === 'montag') {
+            targets = ['evp1', 'deutsch', 'stdm', 'kryp'];
+        } else {
+            targets = ['gid', 'englisch', 'evp2'];
+        }
+
+        targets.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.value = "Krank";
+                // Optional: Checkbox deaktivieren, damit KI-Korrektur es nicht überschreibt
+                const cb = document.querySelector(`.subject-select[data-id="${id}"]`);
+                if (cb) cb.checked = false;
+            }
+        });
+        
+        // Toast Nachricht (falls vorhanden)
+        alert(`${day.charAt(0).toUpperCase() + day.slice(1)} auf "Krank" gesetzt.`);
+    }
+}

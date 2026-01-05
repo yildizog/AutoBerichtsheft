@@ -86,3 +86,54 @@ textarea { width: 100%; background: var(--bg-input); border: 1px solid var(--bor
 .run-card.completed {
     border-color: #10b981;
 }
+
+.btn-sick {
+    background: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #fca5a5;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-sick:hover {
+    background: #fecaca;
+    transform: translateY(-1px);
+}
+
+.btn-sick:active {
+    transform: translateY(0);
+}
+/* Container für Titel und Button */
+.day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.day-header .day-title {
+    margin: 0; /* Entfernt Standard-Abstände */
+}
+
+/* Der "Krank"-Button */
+.btn-sick {
+    background: #fff1f2;
+    color: #e11d48;
+    border: 1px solid #fda4af;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-sick:hover {
+    background: #ffe4e6;
+    border-color: #fb7185;
+    transform: translateY(-1px);
+}
