@@ -19,13 +19,10 @@
                 <h2>🔐 Login & Setup</h2>
                 <p style="color:var(--text-muted); font-size:14px; margin-top:5px;">Bitte die erforderlichen Keys eingeben</p>
                 
-                <label class="subject-label" style="text-align:left; margin-top:15px;">GitHub Access Token</label>
-                <input type="password" id="ghTokenInput" class="token-input" placeholder="ghp_...">
+                <input type="password" id="ghTokenInput" class="token-input" placeholder="GitHub Token (ghp_...)">
+                <input type="password" id="geminiTokenInput" class="token-input" placeholder="Gemini API Key (AIza...)">
                 
-                <label class="subject-label" style="text-align:left; margin-top:10px;">Gemini AI API Key</label>
-                <input type="password" id="geminiTokenInput" class="token-input" placeholder="AIzaSy...">
-                
-                <button class="btn-hero" style="width:100%; justify-content:center; margin-top:20px;" onclick="saveTokenAndLogin()">
+                <button class="btn-hero" style="width:100%; justify-content:center;" onclick="saveTokenAndLogin()">
                     Speichern & Starten
                 </button>
             </div>
@@ -64,10 +61,10 @@
                 <div class="section-container">
                     <div class="section-header">
                         <div class="header-left">
-                            <h3 class="section-title">🏫 Berufsschule (WebUntis)</h3>
+                            <h3 class="section-title">🏫 Berufsschule</h3>
                             <label class="select-all-label">
                                 <input type="checkbox" id="selectAllSubjects" checked onclick="toggleAllSubjects(this.checked)"> 
-                                <span>Alle wählen</span>
+                                <span>Alle</span>
                             </label>
                         </div>
                         <button id="btnAISchool" class="btn-ai btn-secondary" onclick="refineSchoolWithAI()">
@@ -75,80 +72,62 @@
                         </button>
                     </div>
 
-                    <div class="subject-grid">
-                        <div class="subject-box">
-                            <div class="box-header">
-                                <span class="subject-label">EVP (Mo)</span>
-                                <input type="checkbox" class="subject-select" data-id="evp1" checked>
+                    <div class="day-group">
+                        <h4>Montag</h4>
+                        <div class="subject-grid">
+                            <div class="subject-box">
+                                <div class="box-header"><span>EVP</span><input type="checkbox" class="subject-select" data-id="evp1" checked></div>
+                                <textarea id="evp1"></textarea>
                             </div>
-                            <textarea id="evp1"></textarea>
-                        </div>
-                        
-                        <div class="subject-box">
-                            <div class="box-header">
-                                <span class="subject-label">Deutsch (Mo)</span>
-                                <input type="checkbox" class="subject-select" data-id="deutsch" checked>
+                            <div class="subject-box">
+                                <div class="box-header"><span>Deutsch</span><input type="checkbox" class="subject-select" data-id="deutsch" checked></div>
+                                <textarea id="deutsch"></textarea>
                             </div>
-                            <textarea id="deutsch"></textarea>
+                            <div class="subject-box">
+                                <div class="box-header"><span>STDM</span><input type="checkbox" class="subject-select" data-id="stdm" checked></div>
+                                <textarea id="stdm"></textarea>
+                            </div>
+                            <div class="subject-box">
+                                <div class="box-header"><span>Kryptologie</span><input type="checkbox" class="subject-select" data-id="kryp" checked></div>
+                                <textarea id="kryp"></textarea>
+                            </div>
                         </div>
+                    </div>
 
-                        <div class="subject-box">
-                            <div class="box-header">
-                                <span class="subject-label">STDM (Mo)</span>
-                                <input type="checkbox" class="subject-select" data-id="stdm" checked>
+                    <div class="day-group">
+                        <h4>Freitag</h4>
+                        <div class="subject-grid">
+                            <div class="subject-box">
+                                <div class="box-header"><span>GID</span><input type="checkbox" class="subject-select" data-id="gid" checked></div>
+                                <textarea id="gid"></textarea>
                             </div>
-                            <textarea id="stdm"></textarea>
-                        </div>
-
-                        <div class="subject-box">
-                            <div class="box-header">
-                                <span class="subject-label">Kryptologie (Mo)</span>
-                                <input type="checkbox" class="subject-select" data-id="kryp" checked>
+                            <div class="subject-box">
+                                <div class="box-header"><span>Englisch</span><input type="checkbox" class="subject-select" data-id="englisch" checked></div>
+                                <textarea id="englisch"></textarea>
                             </div>
-                            <textarea id="kryp"></textarea>
-                        </div>
-
-                        <div class="subject-box">
-                            <div class="box-header">
-                                <span class="subject-label">GID (Fr)</span>
-                                <input type="checkbox" class="subject-select" data-id="gid" checked>
+                            <div class="subject-box">
+                                <div class="box-header"><span>EVP (2)</span><input type="checkbox" class="subject-select" data-id="evp2" checked></div>
+                                <textarea id="evp2"></textarea>
                             </div>
-                            <textarea id="gid"></textarea>
-                        </div>
-
-                        <div class="subject-box">
-                            <div class="box-header">
-                                <span class="subject-label">Englisch (Fr)</span>
-                                <input type="checkbox" class="subject-select" data-id="englisch" checked>
-                            </div>
-                            <textarea id="englisch"></textarea>
-                        </div>
-
-                        <div class="subject-box">
-                            <div class="box-header">
-                                <span class="subject-label">EVP 2 (Fr)</span>
-                                <input type="checkbox" class="subject-select" data-id="evp2" checked>
-                            </div>
-                            <textarea id="evp2"></textarea>
                         </div>
                     </div>
                 </div>
 
-                <div class="full-width-box" style="margin-top: 30px;">
+                <div class="full-width-box">
                     <div class="section-header">
                         <h3 class="section-title">🛠️ Betriebliche Tätigkeiten</h3>
                         <button id="btnAI" class="btn-ai" onclick="refineWithAI()">
                             <span>🪄</span> KI Überarbeiten
                         </button>
                     </div>
-                    <textarea id="workActivities" placeholder="Stichpunkte hier eingeben und KI nutzen..." style="min-height: 180px;"></textarea>
+                    <textarea id="workActivities" placeholder="Stichpunkte hier eingeben..."></textarea>
                 </div>
 
                 <div class="action-bar">
                     <button id="btnUpload" class="btn btn-success" onclick="triggerUpload()">
                         🚀 Ins IHK Portal eintragen
                     </button>
-                    <p id="detailLog" class="detail-log"></p>
+                    <p id="detailLog"></p>
                 </div>
             </div>
         </div>
