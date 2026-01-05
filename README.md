@@ -55,9 +55,7 @@ Nachdem die .env-Datei erstellt und die Abhängigkeiten installiert wurden, kön
 
 2. Erstelle in den Github Action Secrets die passenden Umgebungsvariablen wie in der .env
 
-3. Passe ggf. die playwright.schedule.yml in .github/workflows an 
-
-   ( für die Anpassung wann der Job immer laufen soll)
+3. Passe 
 
 
 

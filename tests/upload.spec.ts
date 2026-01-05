@@ -26,7 +26,7 @@ test('Teil 2: IHK Upload', async ({ page }) => {
     }
 
     // Formatierung für das Schulfeld (ausbinhalt3)
-    const schoolInhalt = `Montag:\nEVP: ${contentObj.evp1}\nDeutsch: ${contentObj.deutsch}\nSTDM: ${contentObj.stdm}\nKryp: ${contentObj.kryp}\n\nFreitag:\nGID: ${contentObj.gid}\nEnglisch: ${contentObj.englisch}\nEVP: ${contentObj.evp2}`;
+    const schoolInhalt = `Montag:\nEntwicklung Vernetzter Prozesse: ${contentObj.evp1}\nDeutsch: ${contentObj.deutsch}\nSoftwaretechnologie und Datenmanagment: ${contentObj.stdm}\nKryptologie: ${contentObj.kryp}\n\nFreitag:\nGestaltung It Dienstleitungen: ${contentObj.gid}\nEnglisch: ${contentObj.englisch}\nEntwicklung Vernetzter Prozesse: ${contentObj.evp2}`;
 
     // Die betrieblichen Tätigkeiten (ausbinhalt1)
     const betrieblicheTaetigkeiten = contentObj.workActivities || '';

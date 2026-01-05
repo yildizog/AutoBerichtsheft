@@ -243,11 +243,11 @@ function triggerUpload() {
         kryp: document.getElementById('kryp').value,
         gid: document.getElementById('gid').value,
         englisch: document.getElementById('englisch').value,
-        evp2: document.getElementById('evp2').value
+        evp2: document.getElementById('evp2').value,
+        // NEU: Jetzt wird auch der Text aus der betrieblichen Rubrik mitgesendet
+        workActivities: document.getElementById('workActivities').value 
     };
 
-    // WICHTIG: Wir senden jetzt auch die ID mit, damit der Uploader weiß, 
-    // welchen Status er in Firebase updaten muss!
     sendGithubDispatch('trigger-ihk-upload', {
         text: JSON.stringify(content),
         reportId: currentReportId
