@@ -15,24 +15,20 @@
 
     <div class="container">
         <div id="authSection" class="hidden">
-    <div class="auth-card">
-        <h2>🔐 Login & Setup</h2>
-        <p style="color:var(--text-muted); font-size:14px; margin-top:5px;">Bitte die erforderlichen Keys eingeben</p>
-        
-        <label class="subject-label" style="text-align:left; margin-top:15px;">GitHub Access Token</label>
-        <input type="password" id="ghTokenInput" class="token-input" placeholder="ghp_...">
-        
-        <label class="subject-label" style="text-align:left; margin-top:10px;">Gemini AI API Key</label>
-        <input type="password" id="geminiTokenInput" class="token-input" placeholder="AIzaSy...">
-        
-        <button class="btn-hero" style="width:100%; justify-content:center; margin-top:20px;" onclick="saveTokenAndLogin()">
-            Speichern & Starten
-        </button>
-        <p style="font-size:11px; color:var(--text-muted); margin-top:15px;">
-            Die Keys werden nur lokal in deinem Browser gespeichert.
-        </p>
-    </div>
-</div>
+            <div class="auth-card">
+                <h2>🔐 Login & Setup</h2>
+                <p style="color:var(--text-muted); font-size:14px; margin-top:5px;">Bitte die erforderlichen Keys eingeben</p>
+                
+                <label class="subject-label" style="text-align:left; margin-top:15px;">GitHub Access Token</label>
+                <input type="password" id="ghTokenInput" class="token-input" placeholder="ghp_...">
+                
+                <label class="subject-label" style="text-align:left; margin-top:10px;">Gemini AI API Key</label>
+                <input type="password" id="geminiTokenInput" class="token-input" placeholder="AIzaSy...">
+                
+                <button class="btn-hero" style="width:100%; justify-content:center; margin-top:20px;" onclick="saveTokenAndLogin()">
+                    Speichern & Starten
+                </button>
+            </div>
         </div>
 
         <div id="appContent" class="hidden">
@@ -65,102 +61,95 @@
                     </div>
                 </div>
 
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; margin-top: 25px;">
-                    <h3 style="font-size:16px; color:var(--accent); margin-bottom:0;">🏫 Berufsschule (WebUntis Daten)</h3>
-                    <button id="btnAISchool" class="btn-ai" onclick="refineSchoolWithAI()" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
-                        <span>🪄</span> Schulinhalt korrigieren
-                    </button>
-                </div>
-                <div class="subject-grid">
-                </div>
-                <div class="subject-grid">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; margin-top: 25px;">
-                    <div style="display:flex; align-items:center; gap:12px;">
-                        <h3 style="font-size:16px; color:var(--accent); margin-bottom:0;">🏫 Berufsschule</h3>
-                        <label style="font-size: 12px; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 6px;">
-                            <input type="checkbox" id="selectAllSubjects" checked onclick="toggleAllSubjects(this.checked)"> Alle
-                        </label>
-                    </div>
-                    <button id="btnAISchool" class="btn-ai" onclick="refineSchoolWithAI()" style="background: linear-gradient(135deg, #059669 0%, #10b981 100%);">
-                        <span>🪄</span> Selektierte korrigieren
-                    </button>
-                </div>
-
-                <div class="subject-grid">
-                    <div class="subject-box">
-                        <div class="box-header">
-                            <span class="subject-label">Montag - EVP</span>
-                            <input type="checkbox" class="subject-select" data-id="evp1" checked>
+                <div class="section-container">
+                    <div class="section-header">
+                        <div class="header-left">
+                            <h3 class="section-title">🏫 Berufsschule (WebUntis)</h3>
+                            <label class="select-all-label">
+                                <input type="checkbox" id="selectAllSubjects" checked onclick="toggleAllSubjects(this.checked)"> 
+                                <span>Alle wählen</span>
+                            </label>
                         </div>
-                        <textarea id="evp1"></textarea>
-                    </div>
-                    
-                    <div class="subject-box">
-                        <div class="box-header">
-                            <span class="subject-label">Montag - Deutsch</span>
-                            <input type="checkbox" class="subject-select" data-id="deutsch" checked>
-                        </div>
-                        <textarea id="deutsch"></textarea>
+                        <button id="btnAISchool" class="btn-ai btn-secondary" onclick="refineSchoolWithAI()">
+                            <span>🪄</span> Selektierte korrigieren
+                        </button>
                     </div>
 
-                    <div class="subject-box">
-                        <div class="box-header">
-                            <span class="subject-label">Montag - STDM</span>
-                            <input type="checkbox" class="subject-select" data-id="stdm" checked>
+                    <div class="subject-grid">
+                        <div class="subject-box">
+                            <div class="box-header">
+                                <span class="subject-label">EVP (Mo)</span>
+                                <input type="checkbox" class="subject-select" data-id="evp1" checked>
+                            </div>
+                            <textarea id="evp1"></textarea>
                         </div>
-                        <textarea id="stdm"></textarea>
-                    </div>
+                        
+                        <div class="subject-box">
+                            <div class="box-header">
+                                <span class="subject-label">Deutsch (Mo)</span>
+                                <input type="checkbox" class="subject-select" data-id="deutsch" checked>
+                            </div>
+                            <textarea id="deutsch"></textarea>
+                        </div>
 
-                    <div class="subject-box">
-                        <div class="box-header">
-                            <span class="subject-label">Montag - Kryptologie</span>
-                            <input type="checkbox" class="subject-select" data-id="kryp" checked>
+                        <div class="subject-box">
+                            <div class="box-header">
+                                <span class="subject-label">STDM (Mo)</span>
+                                <input type="checkbox" class="subject-select" data-id="stdm" checked>
+                            </div>
+                            <textarea id="stdm"></textarea>
                         </div>
-                        <textarea id="kryp"></textarea>
-                    </div>
 
-                    <div class="subject-box">
-                        <div class="box-header">
-                            <span class="subject-label">Freitag - GID</span>
-                            <input type="checkbox" class="subject-select" data-id="gid" checked>
+                        <div class="subject-box">
+                            <div class="box-header">
+                                <span class="subject-label">Kryptologie (Mo)</span>
+                                <input type="checkbox" class="subject-select" data-id="kryp" checked>
+                            </div>
+                            <textarea id="kryp"></textarea>
                         </div>
-                        <textarea id="gid"></textarea>
-                    </div>
 
-                    <div class="subject-box">
-                        <div class="box-header">
-                            <span class="subject-label">Freitag - Englisch</span>
-                            <input type="checkbox" class="subject-select" data-id="englisch" checked>
+                        <div class="subject-box">
+                            <div class="box-header">
+                                <span class="subject-label">GID (Fr)</span>
+                                <input type="checkbox" class="subject-select" data-id="gid" checked>
+                            </div>
+                            <textarea id="gid"></textarea>
                         </div>
-                        <textarea id="englisch"></textarea>
-                    </div>
 
-                    <div class="subject-box">
-                        <div class="box-header">
-                            <span class="subject-label">Freitag - EVP (2)</span>
-                            <input type="checkbox" class="subject-select" data-id="evp2" checked>
+                        <div class="subject-box">
+                            <div class="box-header">
+                                <span class="subject-label">Englisch (Fr)</span>
+                                <input type="checkbox" class="subject-select" data-id="englisch" checked>
+                            </div>
+                            <textarea id="englisch"></textarea>
                         </div>
-                        <textarea id="evp2"></textarea>
+
+                        <div class="subject-box">
+                            <div class="box-header">
+                                <span class="subject-label">EVP 2 (Fr)</span>
+                                <input type="checkbox" class="subject-select" data-id="evp2" checked>
+                            </div>
+                            <textarea id="evp2"></textarea>
+                        </div>
                     </div>
                 </div>
-                </div>
 
-                <div class="full-width-box" style="margin-top: 25px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <span class="subject-label" style="margin-bottom:0;">🛠️ Betriebliche Tätigkeiten</span>
+                <div class="full-width-box" style="margin-top: 30px;">
+                    <div class="section-header">
+                        <h3 class="section-title">🛠️ Betriebliche Tätigkeiten</h3>
                         <button id="btnAI" class="btn-ai" onclick="refineWithAI()">
                             <span>🪄</span> KI Überarbeiten
                         </button>
                     </div>
-                    <textarea id="workActivities" placeholder="Stichpunkte hier eingeben und KI nutzen..." style="min-height: 150px;"></textarea>
+                    <textarea id="workActivities" placeholder="Stichpunkte hier eingeben und KI nutzen..." style="min-height: 180px;"></textarea>
                 </div>
 
                 <div class="action-bar">
                     <button id="btnUpload" class="btn btn-success" onclick="triggerUpload()">
-                        🚀 Ins IHK Portal eintragen (Run 2 starten)
+                        🚀 Ins IHK Portal eintragen
                     </button>
+                    <p id="detailLog" class="detail-log"></p>
                 </div>
-                <p id="detailLog" style="margin-top:15px; font-family:monospace; font-size:12px; color:var(--text-muted); text-align:center;"></p>
             </div>
         </div>
     </div>
