@@ -170,27 +170,33 @@ function triggerUpload() {
 }
 
 function setSick(day) {
-    const confirmSick = confirm(`Möchtest du alle Fächer für ${day === 'montag' ? 'Montag' : 'Freitag'} auf "Krank" setzen?`);
+    // Erzeugt aus "montag" -> "Montag"
+    const dayLabel = day.charAt(0).toUpperCase() + day.slice(1);
     
-    if (confirmSick) {
-        let targets = [];
-        if (day === 'montag') {
-            targets = ['evp1', 'deutsch', 'stdm', 'kryp'];
-        } else {
-            targets = ['gid', 'englisch', 'evp2'];
-        }
+    // Sicherheitsabfrage
+    if (!confirm(`${dayLabel} auf "Krank" setzen?`)) return;
 
-        targets.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) {
-                el.value = "Krank";
-                // Optional: Checkbox deaktivieren, damit KI-Korrektur es nicht überschreibt
-                const cb = document.querySelector(`.subject-select[data-id="${id}"]`);
-                if (cb) cb.checked = false;
-            }
-        });
+    const mapping = {
+        'montag': ['evp1', 'deutsch', 'stdm', 'kryp'],
+        'freitag': ['gid', 'englisch', 'evp2']
+    };
+
+    const subjects = mapping[day];
+
+    subjects.forEach(id => {
+        const field = document.getElementById(id);
+        const checkbox = document.querySelector(`.subject-select[data-id="${id}"]`);
         
-        // Toast Nachricht (falls vorhanden)
-        alert(`${day.charAt(0).toUpperCase() + day.slice(1)} auf "Krank" gesetzt.`);
-    }
+        if (field) {
+            // Setzt den Text auf z.B. "Montag Krank" statt nur "Krank"
+            field.value = `${dayLabel} Krank`; 
+        }
+        
+        if (checkbox) {
+            // Checkbox abwählen, damit die KI-Korrektur diese Felder ignoriert
+            checkbox.checked = false; 
+        }
+    });
+    
+    console.log(`${dayLabel} wurde als krank markiert.`);
 }
