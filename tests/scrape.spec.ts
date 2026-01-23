@@ -7,10 +7,19 @@ dotenv.config();
 /**
  * KONFIGURATION
  */
-const TARGET_DATE = process.env.TARGET_DATE || '2026-01-12';
-// WICHTIG: WebUntis nutzt oft das Format ohne Bindestriche in der URL für den State
-const formattedDate = TARGET_DATE.replace(/-/g, '');
-const targetUrl = `https://le-bk-muenster.webuntis.com/WebUntis/?school=le-bk-muenster#/basic/timetable/my-student?date=${formattedDate}`;
+const getAutoTargetDate = () => {
+    if (process.env.TARGET_DATE) return process.env.TARGET_DATE;
+    const d = new Date();
+    d.setDate(d.getDate() - 7); // Eine Woche zurück
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+};
+
+const TARGET_DATE = getAutoTargetDate();
+// WICHTIG: Datum muss im Format YYYY-MM-DD bleiben
+const targetUrl = `https://le-bk-muenster.webuntis.com/WebUntis/?school=le-bk-muenster#/basic/timetable/my-student?date=${TARGET_DATE}`;
 
 test('Teil 1: Scrape WebUntis & Update Firebase - High Performance', async ({ page }) => {
 
