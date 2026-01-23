@@ -3,6 +3,11 @@ on:
   schedule:
     - cron: '0 8 * * 2' 
   workflow_dispatch:
+    inputs:
+      target_date:
+        description: 'Datum (YYYY-MM-DD)'
+        required: false
+        default: ''
 jobs:
   scrape:
     runs-on: ubuntu-latest
@@ -11,6 +16,7 @@ jobs:
       UNITSPASS: ${{ secrets.UNITSPASS }}
       FIREBASE_URL: ${{ secrets.FIREBASE_URL }}
       FIREBASE_SECRET: ${{ secrets.FIREBASE_SECRET }}
+      TARGET_DATE: ${{ github.event.inputs.target_date }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

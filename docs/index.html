@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="de">
+
 <head>
     <link rel="icon" type="image/png" href="./favicon.png?v=1">
     <meta charset="UTF-8">
@@ -10,6 +11,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
+
 <body>
 
     <div id="toast-container"></div>
@@ -37,16 +39,20 @@
                         <button class="refresh-btn" onclick="fetchGithubRuns()">🔄</button>
                     </div>
                     <div id="gh-run-status" class="run-container">
-                        <p style="font-size: 12px; color: var(--text-muted);">Lade GitHub Status...</p>
+                        <p style="text-align:center; color: var(--text-muted);">Lade GitHub Status...</p>
                     </div>
                 </div>
 
-                <div class="view-header" style="margin-top: 30px;">
+                <div class="view-header">
                     <div>
                         <h2>Berichts-Archiv</h2>
                         <p class="subtitle">Wähle eine Woche zum Bearbeiten</p>
                     </div>
-                    <button class="btn-hero" onclick="triggerScrape()">✨ Neue Woche holen</button>
+                    <div style="display:flex; gap:10px;">
+                        <input type="date" id="scrapeDateInput" class="badge"
+                            style="background:var(--bg-input); color:white; border:1px solid var(--border); padding:10px;">
+                        <button class="btn-hero" onclick="triggerScrape()">✨ Neue Woche holen</button>
+                    </div>
                 </div>
                 <ul id="reportList" class="process-list"></ul>
             </div>
@@ -59,37 +65,61 @@
                 </div>
 
                 <div class="section-header">
-                    <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="display:flex; align-items:center; gap:16px;">
                         <h3 class="section-title">🏫 Berufsschule</h3>
-                        <label class="select-all-label">
-                            <input type="checkbox" id="selectAllSubjects" checked onclick="toggleAllSubjects(this.checked)"> Alle
+                        <label class="select-all-label"
+                            style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                            <input type="checkbox" id="selectAllSubjects" checked
+                                onclick="toggleAllSubjects(this.checked)"> Alle
                         </label>
                     </div>
-                    <button id="btnAISchool" class="btn-ai btn-secondary" onclick="refineSchoolWithAI()">🪄 KI Korrektur</button>
+                    <button id="btnAISchool" class="btn-ai btn-secondary" onclick="refineSchoolWithAI()">🪄 KI
+                        Korrektur</button>
                 </div>
 
-            <div class="days-wrapper">
-                <div class="day-column">
-                    <div class="day-header">
-                        <h4 class="day-title">Montag</h4>
-                        <button class="btn-sick" onclick="setSick('montag')">🤒 Krank</button>
+                <div class="days-wrapper">
+                    <div class="day-column">
+                        <div class="day-header">
+                            <h4 class="day-title">Montag</h4>
+                            <button class="btn-sick" onclick="setSick('montag')">🤒 Krank</button>
+                        </div>
+                        <div class="subject-box">
+                            <div class="box-header"><span>EVP</span><input type="checkbox" class="subject-select"
+                                    data-id="evp1" checked></div><textarea id="evp1"></textarea>
+                        </div>
+                        <div class="subject-box">
+                            <div class="box-header"><span>Deutsch</span><input type="checkbox" class="subject-select"
+                                    data-id="deutsch" checked></div><textarea id="deutsch"></textarea>
+                        </div>
+                        <div class="subject-box">
+                            <div class="box-header"><span>STDM</span><input type="checkbox" class="subject-select"
+                                    data-id="stdm" checked></div><textarea id="stdm"></textarea>
+                        </div>
+                        <div class="subject-box">
+                            <div class="box-header"><span>Kryptologie</span><input type="checkbox"
+                                    class="subject-select" data-id="kryp" checked></div><textarea id="kryp"></textarea>
+                        </div>
                     </div>
-                    <div class="subject-box"><div class="box-header"><span>EVP</span><input type="checkbox" class="subject-select" data-id="evp1" checked></div><textarea id="evp1"></textarea></div>
-                    <div class="subject-box"><div class="box-header"><span>Deutsch</span><input type="checkbox" class="subject-select" data-id="deutsch" checked></div><textarea id="deutsch"></textarea></div>
-                    <div class="subject-box"><div class="box-header"><span>STDM</span><input type="checkbox" class="subject-select" data-id="stdm" checked></div><textarea id="stdm"></textarea></div>
-                    <div class="subject-box"><div class="box-header"><span>Kryptologie</span><input type="checkbox" class="subject-select" data-id="kryp" checked></div><textarea id="kryp"></textarea></div>
-                </div>
 
-                <div class="day-column">
-                    <div class="day-header">
-                        <h4 class="day-title">Freitag</h4>
-                        <button class="btn-sick" onclick="setSick('freitag')">🤒 Krank</button>
+                    <div class="day-column">
+                        <div class="day-header">
+                            <h4 class="day-title">Freitag</h4>
+                            <button class="btn-sick" onclick="setSick('freitag')">🤒 Krank</button>
+                        </div>
+                        <div class="subject-box">
+                            <div class="box-header"><span>GID</span><input type="checkbox" class="subject-select"
+                                    data-id="gid" checked></div><textarea id="gid"></textarea>
+                        </div>
+                        <div class="subject-box">
+                            <div class="box-header"><span>Englisch</span><input type="checkbox" class="subject-select"
+                                    data-id="englisch" checked></div><textarea id="englisch"></textarea>
+                        </div>
+                        <div class="subject-box">
+                            <div class="box-header"><span>EVP (2)</span><input type="checkbox" class="subject-select"
+                                    data-id="evp2" checked></div><textarea id="evp2"></textarea>
+                        </div>
                     </div>
-                    <div class="subject-box"><div class="box-header"><span>GID</span><input type="checkbox" class="subject-select" data-id="gid" checked></div><textarea id="gid"></textarea></div>
-                    <div class="subject-box"><div class="box-header"><span>Englisch</span><input type="checkbox" class="subject-select" data-id="englisch" checked></div><textarea id="englisch"></textarea></div>
-                    <div class="subject-box"><div class="box-header"><span>EVP (2)</span><input type="checkbox" class="subject-select" data-id="evp2" checked></div><textarea id="evp2"></textarea></div>
                 </div>
-            </div>
 
                 <div class="full-width-box">
                     <div class="section-header">
@@ -101,7 +131,7 @@
 
                 <div class="action-bar">
                     <button id="btnUpload" class="btn-success" onclick="triggerUpload()">🚀 IHK Upload starten</button>
-                    <p id="detailLog"></p>
+                    <p id="detailLog" style="margin-top:10px; color:var(--text-muted);"></p>
                 </div>
             </div>
         </div>
@@ -110,4 +140,5 @@
     <script src="config.js"></script>
     <script src="script.js"></script>
 </body>
+
 </html>

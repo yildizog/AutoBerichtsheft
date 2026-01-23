@@ -1,7 +1,9 @@
 firebase.initializeApp(CONFIG.FIREBASE);
 const db = firebase.database();
+// --- GLOBALE STATS ---
 let currentReportId = null;
 let allReports = {};
+let sickDays = { montag: false, freitag: false };
 
 document.addEventListener('DOMContentLoaded', () => {
     const gh = localStorage.getItem('gh_token'), ai = localStorage.getItem('gemini_token');
@@ -12,49 +14,60 @@ function showApp() {
     document.getElementById('appContent').classList.remove('hidden');
     listenToReports();
     fetchGithubRuns();
-    setInterval(fetchGithubRuns, 30000); // Alle 30 Sek. aktualisieren
+    setInterval(fetchGithubRuns, 10000); // Alle 10 Sek. aktualisieren
 }
 
-// --- GITHUB RUNS ABFRAGEN ---
-// Intervall auf 10 Sekunden verkürzen für mehr "Realtime"-Feeling
-setInterval(fetchGithubRuns, 10000); 
-
+// --- GITHUB RUNS ABFRAGEN (Timeline Style) ---
 async function fetchGithubRuns() {
     const token = localStorage.getItem('gh_token');
     const container = document.getElementById('gh-run-status');
-    const url = `https://api.github.com/repos/${CONFIG.GITHUB_USER}/${CONFIG.GITHUB_REPO}/actions/runs?per_page=3`;
+    // Wir holen nur den neuesten Run für eine übersichtlichere Ansicht
+    const url = `https://api.github.com/repos/${CONFIG.GITHUB_USER}/${CONFIG.GITHUB_REPO}/actions/runs?per_page=1`;
 
     try {
         const res = await fetch(url, { headers: { 'Authorization': `token ${token}` } });
         const data = await res.json();
-        container.innerHTML = '';
 
-        for (const run of data.workflow_runs) {
-            const card = document.createElement('div');
-            card.className = `run-card ${run.status}`;
-            
-            let jobInfo = "";
-            // Wenn der Run läuft, holen wir die Details der Schritte
-            if (run.status === "in_progress" || run.status === "queued") {
-                jobInfo = await fetchJobDetails(run.id, token);
-            }
-
-            const time = new Date(run.created_at).toLocaleString('de-DE', { hour: '2-digit', minute: '2-digit' });
-            
-            card.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <strong style="color:var(--accent);">${run.name}</strong>
-                    <span class="badge ${run.status}">${run.status}</span>
-                </div>
-                <div class="job-steps">${jobInfo}</div>
-                <div style="color:var(--text-muted); font-size:10px; margin-top:8px;">Start: ${time} Uhr</div>
-            `;
-            container.appendChild(card);
+        if (!data.workflow_runs || data.workflow_runs.length === 0) {
+            container.innerHTML = '<p style="text-align:center; color:var(--text-muted);">Keine aktiven Jobs.</p>';
+            return;
         }
+
+        const run = data.workflow_runs[0];
+        container.innerHTML = ''; // Clear
+
+        const card = document.createElement('div');
+        card.className = `run-card ${run.status}`;
+
+        let jobInfo = "";
+        // Wenn in Progress, Details holen
+        if (run.status === "in_progress" || run.status === "queued") {
+            jobInfo = await fetchJobDetails(run.id, token);
+        } else {
+            // Wenn fertig, kurzes Fazit
+            const icon = run.conclusion === 'success' ? '✅' : '❌';
+            jobInfo = `<div class="timeline-item completed"><span class="timeline-icon">${icon}</span> Job beendet: ${run.conclusion}</div>`;
+        }
+
+        const time = new Date(run.created_at).toLocaleString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+        card.innerHTML = `
+            <div class="run-header">
+                <div>
+                    <strong style="color:var(--accent); font-size:1.1rem;">${run.name}</strong>
+                    <div style="font-size:0.8rem; color:var(--text-muted);">Gestartet um ${time} Uhr</div>
+                </div>
+                <span class="badge ${run.status}">${run.status}</span>
+            </div>
+            <div class="timeline-container">
+                ${jobInfo}
+            </div>
+        `;
+        container.appendChild(card);
+
     } catch (e) { console.error("Status-Fehler:", e); }
 }
 
-// Neue Hilfsfunktion für die einzelnen Schritte
 async function fetchJobDetails(runId, token) {
     try {
         const res = await fetch(`https://api.github.com/repos/${CONFIG.GITHUB_USER}/${CONFIG.GITHUB_REPO}/actions/runs/${runId}/jobs`, {
@@ -63,12 +76,38 @@ async function fetchJobDetails(runId, token) {
         const data = await res.json();
         if (!data.jobs) return "";
 
-        return data.jobs.map(job => {
-            // Finde den Schritt, der gerade läuft
-            const currentStep = job.steps.find(s => s.status === "in_progress") || job.steps.reverse().find(s => s.status === "completed");
-            const stepName = currentStep ? `➔ ${currentStep.name}` : "Warten...";
-            return `<div class="live-step"><span class="pulse-dot"></span> ${stepName}</div>`;
-        }).join("");
+        // Wir bauen eine Timeline aus den Jobs und Steps
+        let html = "";
+
+        data.jobs.forEach(job => {
+            html += `<div class="timeline-job-title">${job.name}</div>`;
+
+            job.steps.forEach(step => {
+                let statusIcon = '⚪️';
+                let statusClass = 'pending';
+
+                if (step.status === 'completed') {
+                    statusIcon = '✅';
+                    statusClass = 'completed';
+                    if (step.conclusion === 'failure') statusIcon = '❌';
+                } else if (step.status === 'in_progress') {
+                    statusIcon = '⏳';
+                    statusClass = 'running';
+                }
+
+                html += `
+                    <div class="timeline-item ${statusClass}">
+                        <span class="timeline-icon">${statusIcon}</span>
+                        <div class="timeline-content">
+                            <span class="step-name">${step.name}</span>
+                            <span class="step-time">${step.started_at ? new Date(step.started_at).toLocaleTimeString() : ''}</span>
+                        </div>
+                    </div>
+                `;
+            });
+        });
+
+        return html;
     } catch (e) { return "Details nicht verfügbar"; }
 }
 
@@ -76,16 +115,35 @@ async function fetchJobDetails(runId, token) {
 function listenToReports() {
     db.ref('reports').orderByChild('createdAt').on('value', snapshot => {
         const list = document.getElementById('reportList');
+        // Liste nicht komplett leeren, um Flackern zu vermeiden (TODO: Diffing wäre besser, aber keep simple)
         list.innerHTML = '';
         if (!snapshot.exists()) return;
+
         let reports = [];
         snapshot.forEach(c => reports.push({ id: c.key, ...c.val() }));
+
         reports.reverse().forEach(r => {
             allReports[r.id] = r;
             const li = document.createElement('li');
             li.className = 'process-item';
             li.onclick = () => openDetail(r.id);
-            li.innerHTML = `<div><div style="font-weight:bold;">📄 ${r.dateLabel || r.id}</div><small>${r.createdAt}</small></div><span class="badge ${r.status}">${r.status}</span>`;
+
+            let statusLabel = r.status;
+            if (r.status === 'success') statusLabel = 'Erledigt';
+            if (r.status === 'in_progress') statusLabel = 'Läuft';
+
+            li.innerHTML = `
+                <div style="width:100%">
+                    <div class="item-header">
+                        <div class="item-title">📄 ${r.dateLabel || "Woche " + r.id}</div>
+                        <span class="badge ${r.status}">${statusLabel}</span>
+                    </div>
+                    <div class="item-date">📅 Erstellt: ${r.createdAt}</div>
+                    <div style="margin-top:15px; font-size:0.8rem; color:var(--text-muted);">
+                        Klicken zum Bearbeiten
+                    </div>
+                </div>
+            `;
             list.appendChild(li);
         });
     });
@@ -97,26 +155,51 @@ function openDetail(id) {
     document.getElementById('view-list').classList.add('hidden');
     document.getElementById('view-detail').classList.remove('hidden');
     document.getElementById('detailTitle').innerText = d.dateLabel || id;
-    const fields = ['evp1','deutsch','stdm','kryp','gid','englisch','evp2'];
-    fields.forEach(f => document.getElementById(f).value = d.content ? d.content[f] || '' : '');
+
+    // Reset Sick State
+    sickDays = { montag: false, freitag: false };
+    updateSickUI('montag');
+    updateSickUI('freitag');
+
+    // Felder füllen
+    const fields = ['evp1', 'deutsch', 'stdm', 'kryp', 'gid', 'englisch', 'evp2'];
+    fields.forEach(f => {
+        const el = document.getElementById(f);
+        if (el) el.value = d.content ? d.content[f] || '' : '';
+    });
     document.getElementById('workActivities').value = d.content?.workActivities || '';
 }
 
-function showList() { document.getElementById('view-detail').classList.add('hidden'); document.getElementById('view-list').classList.remove('hidden'); }
+function showList() {
+    document.getElementById('view-detail').classList.add('hidden');
+    document.getElementById('view-list').classList.remove('hidden');
+}
 
-// --- KI KORREKTUR (FIX 404 & Embedding Fehler) ---
+// --- KI KORREKTUR ---
 async function refineSchoolWithAI() {
     const key = localStorage.getItem('gemini_token');
-    const btn = document.getElementById('btnAISchool');
-    const ids = Array.from(document.querySelectorAll('.subject-select:checked')).map(cb => cb.getAttribute('data-id'));
-    if (!ids.length) return alert("Nichts ausgewählt!");
+    if (!key) return alert("Kein API Key!");
 
-    const data = {}; ids.forEach(id => data[id] = document.getElementById(id).value);
+    const btn = document.getElementById('btnAISchool');
+
+    // Nur Felder nehmen, die sichtbar (nicht krank) und angehakt sind
+    const ids = Array.from(document.querySelectorAll('.subject-select:checked')).map(cb => cb.getAttribute('data-id'))
+        .filter(id => {
+            // Filter raus wenn Tag krank
+            if (sickDays.montag && ['evp1', 'deutsch', 'stdm', 'kryp'].includes(id)) return false;
+            if (sickDays.freitag && ['gid', 'englisch', 'evp2'].includes(id)) return false;
+            return true;
+        });
+
+    if (!ids.length) return alert("Nichts zum Korrigieren ausgewählt (oder Tage sind als 'Krank' markiert).");
+
+    const data = {};
+    ids.forEach(id => data[id] = document.getElementById(id).value);
+
     btn.innerHTML = "⏳ Läuft...";
 
     try {
         const list = await (await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`)).json();
-        // FILTER: Nur Modelle, die "generateContent" unterstützen und KEINE Embeddings sind
         const model = list.models.find(m => m.supportedGenerationMethods.includes('generateContent') && !m.name.includes('embedding'))?.name || "models/gemini-pro";
 
         const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${key}`, {
@@ -129,13 +212,13 @@ async function refineSchoolWithAI() {
 
         const resData = await res.json();
         const corrected = JSON.parse(resData.candidates[0].content.parts[0].text.replace(/```json|```/g, ""));
-        Object.keys(corrected).forEach(id => { if(document.getElementById(id)) document.getElementById(id).value = corrected[id]; });
+        Object.keys(corrected).forEach(id => { if (document.getElementById(id)) document.getElementById(id).value = corrected[id]; });
         alert("Fertig!");
     } catch (e) { alert("KI Fehler: " + e.message); }
     finally { btn.innerHTML = "🪄 KI Korrektur"; }
 }
 
-// RESTLICHE FUNKTIONEN (Trigger Scrape/Upload/Auth...)
+// RESTLICHE FUNKTIONEN
 function saveTokenAndLogin() {
     localStorage.setItem('gh_token', document.getElementById('ghTokenInput').value);
     localStorage.setItem('gemini_token', document.getElementById('geminiTokenInput').value);
@@ -147,56 +230,86 @@ function toggleAllSubjects(c) { document.querySelectorAll('.subject-select').for
 
 function triggerScrape() {
     const token = localStorage.getItem('gh_token');
+    const dateInput = document.getElementById('scrapeDateInput').value;
+
+    // Payload bauen
+    let payload = { ref: 'master' };
+    if (dateInput) {
+        payload.inputs = { target_date: dateInput };
+    }
+
     fetch(`https://api.github.com/repos/${CONFIG.GITHUB_USER}/${CONFIG.GITHUB_REPO}/actions/workflows/scrape_schedule.yml/dispatches`, {
-        method: 'POST', headers: { 'Authorization': `token ${token}` }, body: JSON.stringify({ ref: 'master' }) 
-    }).then(() => { alert("Scraper gestartet!"); setTimeout(fetchGithubRuns, 2000); });
+        method: 'POST',
+        headers: { 'Authorization': `token ${token}` },
+        body: JSON.stringify(payload)
+    }).then(() => {
+        alert(dateInput ? `Scraper für ${dateInput} gestartet!` : "Scraper gestartet (Standard-Datum)!");
+        setTimeout(fetchGithubRuns, 2000);
+    });
 }
 
 function triggerUpload() {
-    if(!currentReportId) return;
+    if (!currentReportId) return;
     const token = localStorage.getItem('gh_token');
+
     const content = {
-        evp1: document.getElementById('evp1').value, deutsch: document.getElementById('deutsch').value,
-        stdm: document.getElementById('stdm').value, kryp: document.getElementById('kryp').value,
-        gid: document.getElementById('gid').value, englisch: document.getElementById('englisch').value,
-        evp2: document.getElementById('evp2').value, workActivities: document.getElementById('workActivities').value 
+        evp1: document.getElementById('evp1').value,
+        deutsch: document.getElementById('deutsch').value,
+        stdm: document.getElementById('stdm').value,
+        kryp: document.getElementById('kryp').value,
+        gid: document.getElementById('gid').value,
+        englisch: document.getElementById('englisch').value,
+        evp2: document.getElementById('evp2').value,
+        workActivities: document.getElementById('workActivities').value,
+        sickDays: sickDays // NEU: Krank-Status mitsenden
     };
+
     const url = `https://api.github.com/repos/${CONFIG.GITHUB_USER}/${CONFIG.GITHUB_REPO}/dispatches`;
     fetch(url, {
-        method: 'POST', 
+        method: 'POST',
         headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' },
         body: JSON.stringify({ event_type: 'trigger-ihk-upload', client_payload: { text: JSON.stringify(content), reportId: currentReportId } })
     }).then(() => { alert("Upload-Action gesendet!"); setTimeout(fetchGithubRuns, 2000); });
 }
 
-function setSick(day) {
-    // Erzeugt aus "montag" -> "Montag"
-    const dayLabel = day.charAt(0).toUpperCase() + day.slice(1);
-    
-    // Sicherheitsabfrage
-    if (!confirm(`${dayLabel} auf "Krank" setzen?`)) return;
+// --- NEUE SICK LOGIK ---
 
+function setSick(day) {
+    if (day === 'montag') sickDays.montag = !sickDays.montag;
+    if (day === 'freitag') sickDays.freitag = !sickDays.freitag;
+
+    updateSickUI(day);
+}
+
+function updateSickUI(day) {
+    const isSick = sickDays[day];
     const mapping = {
         'montag': ['evp1', 'deutsch', 'stdm', 'kryp'],
         'freitag': ['gid', 'englisch', 'evp2']
     };
 
-    const subjects = mapping[day];
-
-    subjects.forEach(id => {
-        const field = document.getElementById(id);
-        const checkbox = document.querySelector(`.subject-select[data-id="${id}"]`);
-        
-        if (field) {
-            // Setzt den Text auf z.B. "Montag Krank" statt nur "Krank"
-            field.value = `${dayLabel} Krank`; 
+    // UI Anpassungen
+    const btn = document.querySelector(`button[onclick="setSick('${day}')"]`);
+    if (btn) {
+        if (isSick) {
+            btn.innerHTML = "✅ Als Krank markiert";
+            btn.classList.add('active-sick');
+        } else {
+            btn.innerHTML = "🤒 Krank";
+            btn.classList.remove('active-sick');
         }
-        
-        if (checkbox) {
-            // Checkbox abwählen, damit die KI-Korrektur diese Felder ignoriert
-            checkbox.checked = false; 
+    }
+
+    // Felder deaktivieren/ausgrauen
+    mapping[day].forEach(id => {
+        const field = document.getElementById(id);
+        const box = field.closest('.subject-box');
+        if (isSick) {
+            box.style.opacity = '0.3';
+            box.style.pointerEvents = 'none';
+        } else {
+            box.style.opacity = '1';
+            box.style.pointerEvents = 'all';
         }
     });
-    
-    console.log(`${dayLabel} wurde als krank markiert.`);
 }

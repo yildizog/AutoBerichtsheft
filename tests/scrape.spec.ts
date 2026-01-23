@@ -7,7 +7,7 @@ dotenv.config();
 /**
  * KONFIGURATION
  */
-const TARGET_DATE = '2026-01-12';
+const TARGET_DATE = process.env.TARGET_DATE || '2026-01-12';
 // WICHTIG: WebUntis nutzt oft das Format ohne Bindestriche in der URL für den State
 const formattedDate = TARGET_DATE.replace(/-/g, '');
 const targetUrl = `https://le-bk-muenster.webuntis.com/WebUntis/?school=le-bk-muenster#/basic/timetable/my-student?date=${formattedDate}`;
