@@ -209,7 +209,7 @@ async function updateFirebase(status: string, message: string, data: any) {
     }
 
     const payload = {
-        status: status === 'waiting' ? 'success' : status, // Mapper für Legacy-Status
+        status: status,
         message: message,
         content: data,
         dateLabel: TARGET_DATE,
@@ -221,17 +221,17 @@ async function updateFirebase(status: string, message: string, data: any) {
     const cleanDbUrl = dbUrl.replace(/\/$/, "");
 
     try {
-        // POST erstellt neuen Eintrag mit generierter ID
-        const url = `${cleanDbUrl}/reports.json?auth=${dbSecret}`;
+        // PUT speichert den Eintrag direkt unter dem Datum als ID (keine random ID mehr)
+        const url = `${cleanDbUrl}/reports/${TARGET_DATE}.json?auth=${dbSecret}`;
         const res = await fetch(url, {
-            method: 'POST',
+            method: 'PUT',
             body: JSON.stringify(payload),
             headers: { 'Content-Type': 'application/json' }
         });
 
         if (res.ok) {
             const json = await res.json();
-            console.log("Firebase Upload erfolgreich! ID:", json.name);
+            console.log("Firebase Upload erfolgreich! Gespeichert unter:", TARGET_DATE);
         } else {
             console.error("Firebase Upload fehlgeschlagen:", await res.text());
         }

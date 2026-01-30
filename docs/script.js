@@ -130,7 +130,7 @@ function listenToReports() {
 
             let statusLabel = r.status;
             if (r.status === 'success') statusLabel = 'Erledigt';
-            if (r.status === 'in_progress') statusLabel = 'Läuft';
+            if (r.status === 'waiting') statusLabel = 'Wartet';
 
             li.innerHTML = `
                 <div style="width:100%">
