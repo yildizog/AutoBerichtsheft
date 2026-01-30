@@ -146,16 +146,19 @@ test('Teil 1: Scrape WebUntis & Update Firebase - High Performance', async ({ pa
 // Hilfsfunktionen für Firebase
 async function checkAndCleanupDuplicates(subjects: any) {
     console.log('[DEBUG] Prüfe auf Duplikate...');
-    const dbUrl = process.env.FIREBASE_URL;
-    const dbSecret = process.env.FIREBASE_SECRET;
+    // Environment Variablen sicher lesen (Support für 'KEY' und 'SECRET' sowie Trim gegen Leerzeichen)
+    const dbUrl = (process.env.FIREBASE_URL || '').trim();
+    const dbSecret = (process.env.FIREBASE_SECRET || process.env.FIREBASE_KEY || '').trim();
 
     if (!dbUrl || !dbSecret) {
-        console.warn("WARNUNG: Keine Firebase Credentials gefunden. Skipping Duplicate Check.");
+        console.warn("WARNUNG: Keine Firebase Credentials gefunden (FIREBASE_URL, FIREBASE_SECRET/KEY). Skipping Duplicate Check.");
         return false;
     }
 
     try {
-        const url = `${dbUrl}/reports.json?auth=${dbSecret}`;
+        const cleanDbUrl = dbUrl.replace(/\/$/, "");
+        const url = `${cleanDbUrl}/reports.json?auth=${dbSecret}`;
+        console.log(`[DEBUG] Fetching reports from: ${url.replace(dbSecret, '***')}`);
         const response = await fetch(url);
 
         if (!response.ok) {
@@ -195,11 +198,13 @@ async function checkAndCleanupDuplicates(subjects: any) {
 
 async function updateFirebase(status: string, message: string, data: any) {
     console.log(`[DEBUG] Upload zu Firebase start... Status: ${status}`);
-    const dbUrl = process.env.FIREBASE_URL;
-    const dbSecret = process.env.FIREBASE_SECRET;
+
+    // Environment Variablen sicher lesen (Support für 'KEY' und 'SECRET' sowie Trim gegen Leerzeichen)
+    const dbUrl = (process.env.FIREBASE_URL || '').trim();
+    const dbSecret = (process.env.FIREBASE_SECRET || process.env.FIREBASE_KEY || '').trim();
 
     if (!dbUrl || !dbSecret) {
-        console.error("CRITICAL: Keine Firebase Credentials! Kann nicht speichern.");
+        console.error("CRITICAL: Keine Firebase Credentials! Kann nicht speichern. (Prüfe FIREBASE_URL und FIREBASE_SECRET/KEY)");
         return;
     }
 
@@ -211,9 +216,13 @@ async function updateFirebase(status: string, message: string, data: any) {
         createdAt: new Date().toISOString()
     };
 
+
+    // Trailing slash entfernen, falls vorhanden
+    const cleanDbUrl = dbUrl.replace(/\/$/, "");
+
     try {
         // POST erstellt neuen Eintrag mit generierter ID
-        const url = `${dbUrl}/reports.json?auth=${dbSecret}`;
+        const url = `${cleanDbUrl}/reports.json?auth=${dbSecret}`;
         const res = await fetch(url, {
             method: 'POST',
             body: JSON.stringify(payload),
