@@ -79,13 +79,13 @@ test('Teil 1: Scrape WebUntis & Update Firebase - High Performance', async ({ pa
 
                 // --- NEU: Pause von 1,5 Sekunden nach dem Klick auf das Fach ---
                 // Wir warten hier, damit das Detail-Fenster voll geladen ist
-                await page.waitForTimeout(1500);
+                await page.waitForTimeout(2500);
 
                 const content = await getText();
                 await safeClose();
 
                 // Kurze Pause zur UI-Stabilisierung
-                await page.waitForTimeout(300);
+                await page.waitForTimeout(500);
                 return content;
             }
             return '';
