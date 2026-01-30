@@ -19,7 +19,7 @@ const getAutoTargetDate = () => {
 
 const TARGET_DATE = getAutoTargetDate();
 // WICHTIG: Datum muss im Format YYYY-MM-DD bleiben
-const targetUrl = `https://le-bk-muenster.webuntis.com/WebUntis/?school=le-bk-muenster#/basic/timetable/my-student?date=${TARGET_DATE}`;
+const targetUrl = `https://le-bk-muenster.webuntis.com/timetable/my-student?date=${TARGET_DATE}`;
 
 test('Teil 1: Scrape WebUntis & Update Firebase - High Performance', async ({ page }) => {
 
@@ -68,13 +68,15 @@ test('Teil 1: Scrape WebUntis & Update Firebase - High Performance', async ({ pa
             return '';
         }
     }
-    async function scrapeSubjectContent(locator, label) {
+    async function scrapeSubjectContent(pattern: string | RegExp, index: number) {
         try {
+            // Locator basierend auf Text/Regex erstellen
+            const locator = page.getByText(pattern).nth(index);
+
             if (await locator.count() > 0) {
-                const element = locator.first();
                 // Scrollen stellt sicher, dass das Element im Viewport ist
-                await element.scrollIntoViewIfNeeded();
-                await element.click({ timeout: 5000 });
+                await locator.scrollIntoViewIfNeeded();
+                await locator.click({ timeout: 5000 });
 
                 const content = await getText();
                 await safeClose();
@@ -85,7 +87,7 @@ test('Teil 1: Scrape WebUntis & Update Firebase - High Performance', async ({ pa
             }
             return '';
         } catch (e) {
-            console.warn(`[DEBUG] Fach '${label}' konnte nicht gelesen werden.`);
+            console.warn(`[DEBUG] Fach '${pattern.toString()}' (Index: ${index}) konnte nicht gelesen werden.`);
             await safeClose();
             return '';
         }
@@ -142,3 +144,11 @@ test('Teil 1: Scrape WebUntis & Update Firebase - High Performance', async ({ pa
 });
 
 // Hilfsfunktionen für Firebase bleiben gleich...
+async function checkAndCleanupDuplicates(subjects: any) {
+    console.log('[MOCK] checkAndCleanupDuplicates called with:', subjects);
+    return false;
+}
+
+async function updateFirebase(status: string, message: string, data: any) {
+    console.log(`[MOCK] updateFirebase: ${status} - ${message}`, data);
+}

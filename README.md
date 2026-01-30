@@ -1,61 +1,110 @@
-# 🤖 Auto-Berichtsheft-Automatisierung
+# 🤖 Auto-Berichtsheft
 
-Dieses Projekt automatisiert den wöchentlichen Prozess der Übernahme von Stoffinhalten aus **WebUntis** in das **digitale Berichtsheft der IHK** mithilfe von **Playwright**.
+**Die intelligente Automatisierung für dein IHK-Berichtsheft.**
+
+Dieses Tool automatisiert den lästigen Prozess der Berichtsheftpflege. Es zieht sich die Unterrichtsinhalte direkt aus WebUntis und trägt sie automatisch in das digitale Berichtsheft der IHK (TIBROS) ein.
 
 ---
 
-## 🚀 Lokale Installation und Ausführung
+## ✨ Features
 
-### 1. Abhängigkeiten herunterladen
+Die Anwendung bietet eine vollständige End-to-End Automatisierung:
 
-Installieren Sie alle notwendigen Pakete (Dependencies) im Projektverzeichnis:
+### 1. WebUntis Integration (Scraping)
+- **Automatische Anmeldung**: Loggt sich sicher in deinen WebUntis-Account ein.
+- **Intelligente Extraktion**: Liest die Lehrstoffe der vergangenen Woche aus.
+- **Fach-Filter**: Erkennt spezifische Fächer (z.B. Deutsch, Englisch, EVP, STDM) anhand von Namen oder Regex-Mustern.
+- **High Performance**: Blockiert unnötige Ressourcen (Bilder, Tracker) für maximalen Speed.
+
+### 2. IHK Portal Automatisierung (Upload)
+- **Auto-Login**: Meldet sich im IHK TIBROS Portal an.
+- **Formular-Ausfüllung**: Trägt die gescrapten Inhalte an den richtigen Tagen (Montag/Freitag Blockunterricht) ein.
+- **Betriebliche Tätigkeiten**: Kann auch betriebliche Tätigkeiten ausfüllen (konfigurierbar).
+- **Krankheits-Handling**: Markiert Tage automatisch als "Krank", wenn gewünscht.
+
+### 3. Smart Formatting & Status
+- **Intelligente Formatierung**: Bereitet die Texte leserlich für das Textfeld auf.
+- **Firebase Sync**: Sendet Live-Updates über den Status (Running, Success, Failed) an eine Firebase Realtime Database (für optionale Frontends/Apps).
+- **Fehler-Erkennung**: Macht Screenshots bei Fehlern (`error_debug.png`) zur einfachen Analyse.
+
+---
+
+## 🛠️ Einrichtung & Installation
+
+### Voraussetzungen
+- [Node.js](https://nodejs.org/) (Version 16 oder höher)
+- Ein WebUntis-Account
+- Ein IHK-Azubi-Account
+
+### 1. Repository klonen & installieren
+Lade das Projekt herunter und installiere die Abhängigkeiten:
 
 ```bash
+git clone <repo-url>
+cd AutoBerichtsheft
 npm install
+npx playwright install
+```
+
+### 2. Umgebungsvariablen konfigurieren (.env)
+Erstelle eine Datei namens `.env` im Hauptverzeichnis. Diese Datei beinhaltet deine sensiblen Zugangsdaten und darf **nicht** geteilt werden.
+
+**Kopiere diesen Inhalt in deine `.env`:**
+
+```env
+# --- WebUntis Zugangsdaten ---
+UNITSUSER="Dein_Untis_Nutzername"
+UNITSPASS="Dein_Untis_Passwort"
+# Optional: Zieldatum festlegen (YYYY-MM-DD). Wenn leer, wird automatisch die letzte Woche genommen.
+# TARGET_DATE="2023-10-20"
+
+# --- IHK Portal Zugangsdaten ---
+IHKUSER="Deine_Azubi_Nummer"
+IHKPASS="Dein_IHK_Passwort"
+
+# --- Berichtsheft Details ---
+ABTEILUNG="IT-Abteilung"
+AUSBILDERMAIL="ausbilder@beispiel.de"
+
+# --- Optional: Firebase Integration (für Status-Updates) ---
+# FIREBASE_URL="https://dein-projekt.firebaseio.com"
+# FIREBASE_SECRET="dein-secret-token"
+# REPORT_ID="report_123"
+
+# --- Optional: Input Steuerung ---
+# JSON Format für manuelle Eingriffe oder Krankmeldungen
+# INPUT_TEXT='{"sickDays": {"montag": true, "freitag": false}}'
 ```
 
 ---
 
-### 2.Konfiguration der Zugangsdaten
-Erstellen Sie im Stammverzeichnis des Projekts eine Datei mit dem Namen .env und tragen Sie dort die folgenden Zugangsdaten ein:
+## ▶️ Nutzung
+
+### Testlauf starten
+Um den gesamten Prozess (Scrape + Upload) zu starten:
+
 ```bash
-# WebUntis Zugangsdaten
-UNITSUSER="Ihr_WebUntis_Benutzername"
-UNITSPASS="Ihr_WebUntis_Passwort"
-
-# IHK Portal Zugangsdaten
-IHKUSER="Ihre_Azubinummer"
-IHKPASS="Ihr_IHK_Passwort"
-
-# Metadaten für den Berichtshefteintrag
-AUSBILDERMAIL="ausbilder@firma.de"
-ABTEILUNG="Name der aktuellen Abteilung"
-
-# E-Mail Report Konfiguration (Beispiel Gmail)
-EMAIL_HOST="smtp.gmail.com"
-EMAIL_PORT="465"
-EMAIL_USER="dein.bot@gmail.com"
-EMAIL_PASS="dein-app-passwort-code"
-EMAIL_TO="empfaenger@beispiel.de"
+npx playwright test
 ```
+
+### Debugging-Modus
+Wenn du sehen möchtest, was der Browser macht (mit sichtbarem Fenster):
+
+```bash
+npx playwright test --debug
+```
+
+### Nur bestimmte Tests ausführen
+Das Projekt ist in zwei Teile gegliedert (`scrape.spec.ts` und `upload.spec.ts`). Du kannst sie auch einzeln ansprechen, wenn du z.B. nur das Scraping testen willst.
+
 ---
 
-### 3. Test starten
-Nachdem die .env-Datei erstellt und die Abhängigkeiten installiert wurden, können Sie den Testlauf starten:
+## 📁 Projektstruktur
 
-| Aktion | Befehl 
-| :--- | :--- |
-| Normaler Testlauf | npx playwright test |
-| Debug-Modus | npx playwright test --debug |
+- `tests/scrape.spec.ts`: Logik für WebUntis Login und Datenextraktion.
+- `tests/upload.spec.ts`: Logik für IHK Login und Eintragung.
+- `playwright.config.ts`: Konfiguration für Browser, Timeouts und Retries.
 
+---
 
-### 4. Automatisierter Test
-
-1. Klone dieses Repo in dein Github Verzeichnis
-
-2. Erstelle in den Github Action Secrets die passenden Umgebungsvariablen wie in der .env
-
-3. Passe 
-
-
-
+> **Hinweis**: Die Nutzung erfolgt auf eigene Gefahr. Überprüfe die eingetragenen Daten immer im IHK Portal, bevor du den Bericht endgültig absendest!
