@@ -143,12 +143,90 @@ test('Teil 1: Scrape WebUntis & Update Firebase - High Performance', async ({ pa
     }
 });
 
-// Hilfsfunktionen für Firebase bleiben gleich...
+// Hilfsfunktionen für Firebase
 async function checkAndCleanupDuplicates(subjects: any) {
-    console.log('[MOCK] checkAndCleanupDuplicates called with:', subjects);
-    return false;
+    console.log('[DEBUG] Prüfe auf Duplikate...');
+    const dbUrl = process.env.FIREBASE_URL;
+    const dbSecret = process.env.FIREBASE_SECRET;
+
+    if (!dbUrl || !dbSecret) {
+        console.warn("WARNUNG: Keine Firebase Credentials gefunden. Skipping Duplicate Check.");
+        return false;
+    }
+
+    try {
+        const url = `${dbUrl}/reports.json?auth=${dbSecret}`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            console.error("Fehler beim Abrufen der Berichte:", await response.text());
+            return false;
+        }
+
+        const data = await response.json();
+        if (!data) return false;
+
+        // Suche nach Berichten mit selbem Datum
+        let foundKey = null;
+        for (const [key, report] of Object.entries(data)) {
+            // Wir prüfen, ob "dateLabel" existiert und gleich unserem TARGET_DATE ist
+            // ODER ob das Erstellungsdatum sehr nah liegt (Fallback)
+            // Hier nutzen wir strikt dateLabel = TARGET_DATE
+            if ((report as any).dateLabel === TARGET_DATE) {
+                foundKey = key;
+                break;
+            }
+        }
+
+        if (foundKey) {
+            console.log(`[DEBUG] Alter Eintrag gefunden (${foundKey}). Lösche ihn, um Update zu ermöglichen...`);
+            // Löschen via DELETE Request
+            const deleteUrl = `${dbUrl}/reports/${foundKey}.json?auth=${dbSecret}`;
+            await fetch(deleteUrl, { method: 'DELETE' });
+            return false; // False zurückgeben, damit der NEUE Eintrag geschrieben wird
+        }
+
+        return false;
+    } catch (e) {
+        console.error("Fehler im Duplicate-Check:", e);
+        return false;
+    }
 }
 
 async function updateFirebase(status: string, message: string, data: any) {
-    console.log(`[MOCK] updateFirebase: ${status} - ${message}`, data);
+    console.log(`[DEBUG] Upload zu Firebase start... Status: ${status}`);
+    const dbUrl = process.env.FIREBASE_URL;
+    const dbSecret = process.env.FIREBASE_SECRET;
+
+    if (!dbUrl || !dbSecret) {
+        console.error("CRITICAL: Keine Firebase Credentials! Kann nicht speichern.");
+        return;
+    }
+
+    const payload = {
+        status: status === 'waiting' ? 'success' : status, // Mapper für Legacy-Status
+        message: message,
+        content: data,
+        dateLabel: TARGET_DATE,
+        createdAt: new Date().toISOString()
+    };
+
+    try {
+        // POST erstellt neuen Eintrag mit generierter ID
+        const url = `${dbUrl}/reports.json?auth=${dbSecret}`;
+        const res = await fetch(url, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+            headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (res.ok) {
+            const json = await res.json();
+            console.log("Firebase Upload erfolgreich! ID:", json.name);
+        } else {
+            console.error("Firebase Upload fehlgeschlagen:", await res.text());
+        }
+    } catch (e) {
+        console.error("Exception beim Firebase Upload:", e);
+    }
 }
