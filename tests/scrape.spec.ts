@@ -56,10 +56,10 @@ test('Teil 1: Scrape WebUntis & Update Firebase - High Performance', async ({ pa
 
     async function getText() {
         try {
-            // Sucht nach der Textarea (deckt verschiedene WebUntis-Versionen ab)
+            // Sucht nach der Textarea
             const textarea = page.locator('textarea.ant-input, .un-lesson-details-content textarea').first();
 
-            // Warten, bis das Feld sichtbar ist (wichtiger als ein fester Timeout)
+            // Warten, bis das Feld sichtbar ist
             await textarea.waitFor({ state: 'visible', timeout: 7000 });
 
             const text = await textarea.inputValue();
@@ -68,20 +68,23 @@ test('Teil 1: Scrape WebUntis & Update Firebase - High Performance', async ({ pa
             return '';
         }
     }
+
     async function scrapeSubjectContent(pattern: string | RegExp, index: number) {
         try {
-            // Locator basierend auf Text/Regex erstellen
             const locator = page.getByText(pattern).nth(index);
 
             if (await locator.count() > 0) {
-                // Scrollen stellt sicher, dass das Element im Viewport ist
                 await locator.scrollIntoViewIfNeeded();
                 await locator.click({ timeout: 5000 });
+
+                // --- NEU: Pause von 1,5 Sekunden nach dem Klick auf das Fach ---
+                // Wir warten hier, damit das Detail-Fenster voll geladen ist
+                await page.waitForTimeout(1500);
 
                 const content = await getText();
                 await safeClose();
 
-                // Kurze Pause damit die UI Zeit hat sich zu beruhigen
+                // Kurze Pause zur UI-Stabilisierung
                 await page.waitForTimeout(300);
                 return content;
             }
@@ -92,7 +95,6 @@ test('Teil 1: Scrape WebUntis & Update Firebase - High Performance', async ({ pa
             return '';
         }
     }
-
     // --- TEST ABLAUF ---
     try {
         console.log("--- Start: Login-Vorgang ---");
