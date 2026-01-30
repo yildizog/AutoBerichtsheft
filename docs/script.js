@@ -120,7 +120,9 @@ function listenToReports() {
         if (!snapshot.exists()) return;
 
         let reports = [];
-        snapshot.forEach(c => reports.push({ id: c.key, ...c.val() }));
+        snapshot.forEach(c => {
+            reports.push({ id: c.key, ...c.val() });
+        });
 
         reports.reverse().forEach(r => {
             allReports[r.id] = r;
