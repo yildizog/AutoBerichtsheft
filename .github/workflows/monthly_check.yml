@@ -1,0 +1,56 @@
+name: Monthly Missing Reports Check
+
+on:
+  schedule:
+    # Run every Tuesday at 06:00 UTC (07:00 CET/08:00 CEST)
+    - cron: '0 6 * * 2'
+  workflow_dispatch: # Allow manual trigger for testing
+
+jobs:
+  check-reports:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Check if it is the last Tuesday of the month
+        if: github.event_name == 'schedule'
+        run: |
+          # Get month of today
+          CURRENT_MONTH=$(date +%m)
+          # Get month of next week (today + 7 days)
+          NEXT_WEEK_MONTH=$(date -d "+7 days" +%m)
+          
+          if [ "$CURRENT_MONTH" == "$NEXT_WEEK_MONTH" ]; then
+            echo "Today is NOT the last Tuesday of the month. Skipping check."
+            echo "SKIP_CHECK=true" >> $GITHUB_ENV
+          else
+            echo "Today is the last Tuesday of the month. Proceeding."
+            echo "SKIP_CHECK=false" >> $GITHUB_ENV
+          fi
+
+      - name: Setup Node.js
+        if: env.SKIP_CHECK != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        if: env.SKIP_CHECK != 'true'
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        if: env.SKIP_CHECK != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Missing Reports Check
+        if: env.SKIP_CHECK != 'true'
+        env:
+          IHKUSER: ${{ secrets.IHKUSER }}
+          IHKPASS: ${{ secrets.IHKPASS }}
+          EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
+          EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
+          EMAIL_USER: ${{ secrets.EMAIL_USER }}
+          EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+        run: npx playwright test tests/check_missing_reports.spec.ts
