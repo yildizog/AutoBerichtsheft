@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 import * as dotenv from 'dotenv';
 import * as nodemailer from 'nodemailer';
+import * as fs from 'fs';
+import * as path from 'path';
 
 dotenv.config();
 
@@ -49,14 +51,15 @@ test('Check for missing reports', async ({ page }) => {
     // Pattern: DD.MM.YYYY - DD.MM.YYYY
     const datePattern = /(\d{2}\.\d{2}\.\d{4})\s*-\s*(\d{2}\.\d{2}\.\d{4})/;
 
-    // Get all divs that might contain the date
-    // User snippet: <div class="col-md-8">19.01.2026 - 25.01.2026</div>
     const candidates = page.locator('div');
     const count = await candidates.count();
     console.log(`Scanning divs for reports... (Total divs: ${count})`);
 
     let earliestDate: Date | null = null;
     let foundReports = 0;
+
+    // Track unapproved weeks (weeks that exist but are not "Nachweis genehmigt")
+    const pendingApprovalWeeks: string[] = [];
 
     // Filter by text pattern first to reduce calls
     const rangeLocators = page.getByText(datePattern);
@@ -82,28 +85,30 @@ test('Check for missing reports', async ({ page }) => {
                 earliestDate = startDate;
             }
 
+            let isApproved = false;
+
             // Check for "Nachweis genehmigt"
             // Strategy 1: Check if parent text contains it (if they are in same row container)
             const parent = loc.locator('..');
             const parentText = await parent.innerText();
             if (parentText.includes('Nachweis genehmigt')) {
-                approvedWeeks.add(weekKey);
-                console.log(`Week ${weekKey}: Approved (found in parent block)`);
-                continue;
+                isApproved = true;
+            } else {
+                // Strategy 2: Check nearby sibling text
+                const grandParent = parent.locator('..');
+                const grandParentText = await grandParent.innerText();
+                if (grandParentText.includes(match[0]) && grandParentText.includes('Nachweis genehmigt')) {
+                    isApproved = true;
+                }
             }
 
-            // Strategy 2: Check nearby sibling text (Scanning nearby text content)
-            // Retrieve text content of the parent's parent (grandparent usually covers the row)
-            // CAUTION: This might capture too much, but if "Nachweis genehmigt" is unique to this row, it's fine.
-            const grandParent = parent.locator('..');
-            const grandParentText = await grandParent.innerText();
-            if (grandParentText.includes(match[0]) && grandParentText.includes('Nachweis genehmigt')) {
+            if (isApproved) {
                 approvedWeeks.add(weekKey);
-                console.log(`Week ${weekKey}: Approved (found in grandparent block)`);
-                continue;
+                console.log(`Week ${weekKey}: Approved`);
+            } else {
+                pendingApprovalWeeks.push(weekKey);
+                console.log(`Week ${weekKey}: Not yet approved`);
             }
-
-            console.log(`Week ${weekKey}: Status NOT approved or 'Nachweis genehmigt' not found nearby.`);
         }
     }
 
@@ -116,7 +121,7 @@ test('Check for missing reports', async ({ page }) => {
         earliestDate.setDate(earliestDate.getDate() - 28);
     }
 
-    // 4. Calculate missing/unapproved weeks
+    // 4. Calculate truly missing weeks (gaps)
     const missingWeeks: string[] = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -127,30 +132,86 @@ test('Check for missing reports', async ({ page }) => {
     checkDate.setDate(checkDate.getDate() - (startDay - 1));
 
     while (checkDate < today) {
-
-        // We include all weeks that have started before today.
-        // Even if the week is currently ongoing (e.g. checked on Wednesday for Monday),
-        // if it's not approved, we might want to know (or at least if user wants to check 26.01 on 01.02).
-
         const checkStr = formatDate(checkDate);
-        if (!approvedWeeks.has(checkStr)) {
+
+        // If we didn't find this week in the existing reports (approved or pending), it's missing
+        // Note: We need a way to track if a week exists AT ALL.
+        // The current logic only tracked approvedWeeks. We need to track all found weeks to determine missing ones.
+        // Actually, if it's in pendingApprovalWeeks, it's not "missing" (red), it's "pending" (yellow).
+        // If it's not in approvedWeeks AND not in pendingApprovalWeeks, it's missing (red).
+
+        const isApproved = approvedWeeks.has(checkStr);
+        const isPending = pendingApprovalWeeks.includes(checkStr);
+
+        if (!isApproved && !isPending) {
             missingWeeks.push(checkStr);
         }
 
         checkDate.setDate(checkDate.getDate() + 7);
     }
 
-    // 5. Send Alert and Report results
+    // --- DETERMINE STATUS ---
+    // GREEN: All weeks are approved (no missing, no pending).
+    // YELLOW: Some weeks are pending approval, but none are completely missing.
+    // RED: Some weeks are completely missing (gaps).
+
+    let status = "green";
+    let message = "Alles aktuell & genehmigt";
+
     if (missingWeeks.length > 0) {
-        const msg = `Found ${missingWeeks.length} reports that are NOT 'Nachweis genehmigt' (Missing or Open): ${missingWeeks.join(', ')}`;
+        status = "red";
+        message = `${missingWeeks.length} Berichte fehlen!`;
+    } else if (pendingApprovalWeeks.length > 0) {
+        status = "yellow";
+        message = `${pendingApprovalWeeks.length} Berichte warten auf Genehmigung`;
+    }
+
+    const output = {
+        status: status,
+        lastChecked: new Date().toISOString(),
+        missingCount: missingWeeks.length,
+        pendingCount: pendingApprovalWeeks.length,
+        message: message,
+        details: {
+            missing: missingWeeks,
+            pending: pendingApprovalWeeks
+        }
+    };
+
+    // Save to docs/status.json
+    const outputPath = path.join(__dirname, '../docs/status.json');
+    fs.writeFileSync(outputPath, JSON.stringify(output, null, 2));
+    console.log(`Status saved to ${outputPath}:`, output);
+
+    // 5. Send Alert if RED (Missing Reports)
+    if (missingWeeks.length > 0) {
+        const msg = `Found ${missingWeeks.length} MISSING reports: ${missingWeeks.join(', ')}`;
         console.error(msg);
 
-        // Send Email Alert
-        await sendAlertEmail(missingWeeks);
+        // CHECK IF TODAY IS LAST TUESDAY OF THE MONTH
+        const todayFn = new Date();
+        const currentMonth = todayFn.getMonth();
+        // Check next week (add 7 days)
+        const nextWeek = new Date(todayFn);
+        nextWeek.setDate(todayFn.getDate() + 7);
 
-        console.warn("Missing reports found but not failing the test (email alert sent).");
+        // If next week is in a different month, and today is Tuesday (Day 2), then it is the last Tuesday.
+        // Or if user wants specifically "Last Tuesday logic":
+        const isTuesday = todayFn.getDay() === 2;
+        const isNextWeekNextMonth = nextWeek.getMonth() !== currentMonth;
+
+        // Allow manual override via env var for testing
+        const forceMail = process.env.FORCE_MAIL === 'true';
+
+        if ((isTuesday && isNextWeekNextMonth) || forceMail) {
+            console.log("Today is the last Tuesday of the month (or FORCE_MAIL is set). Sending alert...");
+            await sendAlertEmail(missingWeeks);
+        } else {
+            console.log("Today is NOT the last Tuesday of the month. Skipping email alert (Status Lamp will still be RED).");
+        }
+
     } else {
-        console.log("All past reports are approved ('Nachweis genehmigt').");
+        console.log("No missing reports (Red status blocked).");
     }
 });
 
@@ -159,7 +220,7 @@ async function sendAlertEmail(missingWeeks: string[]) {
     const port = parseInt(process.env.EMAIL_PORT || '465');
     const user = process.env.EMAIL_USER;
     const pass = process.env.EMAIL_PASS;
-    const to = process.env.EMAIL_TO || user; // Default to self
+    const to = process.env.EMAIL_TO || user;
 
     if (!host || !user || !pass) {
         console.warn("Email configuration missing. Skipping email alert.");
@@ -171,32 +232,24 @@ async function sendAlertEmail(missingWeeks: string[]) {
     const transporter = nodemailer.createTransport({
         host: host,
         port: port,
-        secure: port === 465, // true for 465, false for other ports
-        auth: {
-            user: user,
-            pass: pass,
-        },
+        secure: port === 465,
+        auth: { user, pass },
     });
 
-    const subject = `⚠️ ALARM: ${missingWeeks.length} Berichtshefte fehlen/nicht genehmigt!`;
+    const subject = `⚠️ ALARM: ${missingWeeks.length} Berichtshefte fehlen komplett!`;
     const text = `Achtung!
     
-Es wurden ${missingWeeks.length} Einträge gefunden, die NICHT den Status "Nachweis genehmigt" haben.
+Es wurden ${missingWeeks.length} Wochen gefunden, für die gar kein Berichtsheft-Eintrag existiert.
 
 Betroffene Wochen (Startdatum Montag):
 ${missingWeeks.map(w => `- ${w}`).join('\n')}
 
-Bitte dringend prüfen!
+Bitte dringend nachtragen!
     `;
 
     try {
-        const info = await transporter.sendMail({
-            from: `"Berichtsheft Bot" <${user}>`,
-            to: to,
-            subject: subject,
-            text: text,
-        });
-        console.log("Email sent: %s", info.messageId);
+        await transporter.sendMail({ from: `"Berichtsheft Bot" <${user}>`, to, subject, text });
+        console.log("Email sent.");
     } catch (error) {
         console.error("Error sending email:", error);
     }

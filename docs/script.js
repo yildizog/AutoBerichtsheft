@@ -14,8 +14,41 @@ function showApp() {
     document.getElementById('appContent').classList.remove('hidden');
     listenToReports();
     fetchGithubRuns();
-    setInterval(fetchGithubRuns, 10000); // Alle 10 Sek. aktualisieren
+    fetchStatus(); // Check status on load
+    setInterval(fetchGithubRuns, 10000); // Update GitHub runs
+    setInterval(fetchStatus, 60000 * 5); // Check status every 5 mins
 }
+
+// --- STATUS LAMP LOGIK ---
+async function fetchStatus() {
+    const lamp = document.getElementById('statusLamp');
+    try {
+        // Cache busting to get fresh status
+        const res = await fetch('status.json?t=' + new Date().getTime());
+        if (!res.ok) throw new Error("Status file not found");
+
+        const data = await res.json();
+
+        // Remove old classes
+        lamp.classList.remove('green', 'yellow', 'red');
+
+        // Add new class
+        if (data.status) {
+            lamp.classList.add(data.status);
+            lamp.title = `Status: ${data.message} (Stand: ${new Date(data.lastChecked).toLocaleString()})`;
+        } else {
+            lamp.style.backgroundColor = '#ccc';
+            lamp.title = "Status unbekannt";
+        }
+
+    } catch (e) {
+        console.warn("Could not fetch status:", e);
+        lamp.classList.remove('green', 'yellow', 'red');
+        lamp.style.backgroundColor = '#ccc';
+        lamp.title = "Status-Datei nicht gefunden (noch kein Scrape?)";
+    }
+}
+
 
 // --- GITHUB RUNS ABFRAGEN (Timeline Style) ---
 async function fetchGithubRuns() {
