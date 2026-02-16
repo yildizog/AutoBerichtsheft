@@ -192,6 +192,10 @@ test('Check for missing reports', async ({ page }) => {
         const cleanUrl = firebaseURL.endsWith('/') ? firebaseURL.slice(0, -1) : firebaseURL;
         const statusUrl = `${cleanUrl}/status.json?auth=${firebaseKey}`;
 
+        // Debug logging for URL (mask key)
+        const maskedUrl = statusUrl.replace(firebaseKey, '***KEY***');
+        console.log(`Debug: Sending PUT request to: '${maskedUrl}'`);
+
         try {
             console.log("Saving status to Firebase...");
             const response = await fetch(statusUrl, {
