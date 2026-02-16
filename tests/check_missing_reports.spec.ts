@@ -81,6 +81,11 @@ test('Check for missing reports', async ({ page }) => {
             startDate.setDate(startDate.getDate() - (dayOfWeek - 1));
             const weekKey = formatDate(startDate);
 
+            // Avoid duplicates (if selector matches multiple elements for same date)
+            if (approvedWeeks.has(weekKey) || pendingApprovalWeeks.includes(weekKey)) {
+                continue;
+            }
+
             if (!earliestDate || startDate < earliestDate) {
                 earliestDate = startDate;
             }
