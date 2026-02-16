@@ -529,10 +529,23 @@ textarea:focus {
     border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
+
 .badge.waiting {
     background: rgba(161, 161, 170, 0.15);
     color: var(--text-muted);
     border: 1px solid rgba(161, 161, 170, 0.2);
+}
+
+.badge.pending-approval {
+    background: rgba(234, 179, 8, 0.15);
+    /* Yellow-500 equivalent */
+    color: #eab308;
+    border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
+.process-item.is-pending {
+    border-color: rgba(234, 179, 8, 0.4);
+    box-shadow: 0 0 10px rgba(234, 179, 8, 0.05);
 }
 
 @media (max-width: 768px) {

@@ -1,8 +1,8 @@
-firebase.initializeApp(CONFIG.FIREBASE);
-const db = firebase.database();
 // --- GLOBALE STATS ---
 let currentReportId = null;
-let allReports = {};
+let allReports = {}; // Key: ID, Value: Report Data
+let sortedReportsList = []; // Array for rendering
+let pendingWeeks = []; // List of IDs (dates) that are pending approval
 let sickDays = { montag: false, freitag: false };
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -16,7 +16,6 @@ function showApp() {
     fetchGithubRuns();
     fetchStatus(); // Check status on load
     setInterval(fetchGithubRuns, 10000); // Update GitHub runs
-    // setInterval(fetchStatus, 60000 * 5); // Status updates are now real-time via Firebase on() listener
 }
 
 // --- STATUS LAMP LOGIK ---
@@ -33,9 +32,13 @@ async function fetchStatus() {
         statusApproved.className = 'status-pill';
 
         if (data) {
+            // Update Global Pending List
+            pendingWeeks = (data.details && data.details.pending) ? data.details.pending : [];
+
+            // Re-render list to update card statuses
+            renderReportList();
+
             // Logic 1: Submitted Status
-            // If missingCount > 0 -> RED
-            // Else -> GREEN
             if (data.missingCount > 0) {
                 statusSubmitted.classList.add('red');
                 statusSubmitted.title = `${data.missingCount} Berichte fehlen!`;
@@ -45,8 +48,6 @@ async function fetchStatus() {
             }
 
             // Logic 2: Approved Status
-            // If pendingCount > 0 -> YELLOW
-            // Else -> GREEN
             if (data.pendingCount > 0) {
                 statusApproved.classList.add('yellow');
                 statusApproved.title = `${data.pendingCount} Berichte warten auf Genehmigung.`;
@@ -69,7 +70,6 @@ async function fetchStatus() {
 async function fetchGithubRuns() {
     const token = localStorage.getItem('gh_token');
     const container = document.getElementById('gh-run-status');
-    // Wir holen nur den neuesten Run für eine übersichtlichere Ansicht
     const url = `https://api.github.com/repos/${CONFIG.GITHUB_USER}/${CONFIG.GITHUB_REPO}/actions/runs?per_page=1`;
 
     try {
@@ -82,17 +82,15 @@ async function fetchGithubRuns() {
         }
 
         const run = data.workflow_runs[0];
-        container.innerHTML = ''; // Clear
+        container.innerHTML = '';
 
         const card = document.createElement('div');
         card.className = `run-card ${run.status}`;
 
         let jobInfo = "";
-        // Wenn in Progress, Details holen
         if (run.status === "in_progress" || run.status === "queued") {
             jobInfo = await fetchJobDetails(run.id, token);
         } else {
-            // Wenn fertig, kurzes Fazit
             const icon = run.conclusion === 'success' ? '✅' : '❌';
             jobInfo = `<div class="timeline-item completed"><span class="timeline-icon">${icon}</span> Job beendet: ${run.conclusion}</div>`;
         }
@@ -124,16 +122,12 @@ async function fetchJobDetails(runId, token) {
         const data = await res.json();
         if (!data.jobs) return "";
 
-        // Wir bauen eine Timeline aus den Jobs und Steps
         let html = "";
-
         data.jobs.forEach(job => {
             html += `<div class="timeline-job-title">${job.name}</div>`;
-
             job.steps.forEach(step => {
                 let statusIcon = '⚪️';
                 let statusClass = 'pending';
-
                 if (step.status === 'completed') {
                     statusIcon = '✅';
                     statusClass = 'completed';
@@ -142,19 +136,16 @@ async function fetchJobDetails(runId, token) {
                     statusIcon = '⏳';
                     statusClass = 'running';
                 }
-
                 html += `
                     <div class="timeline-item ${statusClass}">
                         <span class="timeline-icon">${statusIcon}</span>
                         <div class="timeline-content">
                             <span class="step-name">${step.name}</span>
-                            <span class="step-time">${step.started_at ? new Date(step.started_at).toLocaleTimeString() : ''}</span>
                         </div>
                     </div>
                 `;
             });
         });
-
         return html;
     } catch (e) { return "Details nicht verfügbar"; }
 }
@@ -162,40 +153,60 @@ async function fetchJobDetails(runId, token) {
 // --- FIREBASE LOGIK ---
 function listenToReports() {
     db.ref('reports').orderByChild('createdAt').on('value', snapshot => {
-        const list = document.getElementById('reportList');
-        // Liste nicht komplett leeren, um Flackern zu vermeiden (TODO: Diffing wäre besser, aber keep simple)
-        list.innerHTML = '';
-        if (!snapshot.exists()) return;
+        if (!snapshot.exists()) {
+            sortedReportsList = [];
+            renderReportList();
+            return;
+        }
 
         let reports = [];
         snapshot.forEach(c => {
             reports.push({ id: c.key, ...c.val() });
         });
 
-        reports.reverse().forEach(r => {
-            allReports[r.id] = r;
-            const li = document.createElement('li');
-            li.className = 'process-item';
-            li.onclick = () => openDetail(r.id);
+        sortedReportsList = reports.reverse();
+        sortedReportsList.forEach(r => allReports[r.id] = r);
 
-            let statusLabel = r.status;
+        renderReportList();
+    });
+}
+
+function renderReportList() {
+    const list = document.getElementById('reportList');
+    list.innerHTML = '';
+
+    sortedReportsList.forEach(r => {
+        const li = document.createElement('li');
+        li.className = 'process-item';
+        li.onclick = () => openDetail(r.id);
+
+        let statusLabel = r.status;
+        let badgeClass = r.status || 'waiting'; // default
+
+        // Check if report is in pending list (from IHK Status)
+        if (pendingWeeks.includes(r.id)) {
+            statusLabel = "Genehmigung ausstehend";
+            badgeClass = "pending-approval";
+            li.classList.add('is-pending'); // Add class for styling border if needed
+        } else {
+            // Normal mappings
             if (r.status === 'success') statusLabel = 'Erledigt';
-            if (r.status === 'waiting') statusLabel = 'Wartet';
+            if (r.status === 'waiting') statusLabel = 'In Bearbeitung';
+        }
 
-            li.innerHTML = `
-                <div style="width:100%">
-                    <div class="item-header">
-                        <div class="item-title">📄 ${r.dateLabel || "Woche " + r.id}</div>
-                        <span class="badge ${r.status}">${statusLabel}</span>
-                    </div>
-                    <div class="item-date">📅 Erstellt: ${r.createdAt}</div>
-                    <div style="margin-top:15px; font-size:0.8rem; color:var(--text-muted);">
-                        Klicken zum Bearbeiten
-                    </div>
+        li.innerHTML = `
+            <div style="width:100%">
+                <div class="item-header">
+                    <div class="item-title">📄 ${r.dateLabel || "Woche " + r.id}</div>
+                    <span class="badge ${badgeClass}">${statusLabel}</span>
                 </div>
-            `;
-            list.appendChild(li);
-        });
+                <div class="item-date">📅 Erstellt: ${r.createdAt}</div>
+                <div style="margin-top:15px; font-size:0.8rem; color:var(--text-muted);">
+                    Klicken zum Bearbeiten
+                </div>
+            </div>
+        `;
+        list.appendChild(li);
     });
 }
 
