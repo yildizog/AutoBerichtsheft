@@ -39,7 +39,7 @@ test('Teil 1: Scrape WebUntis & Update Firebase - High Performance', async ({ pa
     const unitspass = process.env.UNITSPASS || '';
 
     let subjects = {
-        evp1: '', deutsch: '', stdm: '', kryp: '', gid: '', englisch: '', evp2: ''
+        stdm: '', deutsch: '', evp: '', sport: '', wbl: '', englisch: '', dkrypt: ''
     };
 
     // --- OPTIMIERTE HILFSFUNKTIONEN ---
@@ -118,14 +118,13 @@ test('Teil 1: Scrape WebUntis & Update Firebase - High Performance', async ({ pa
         console.log("Starte Daten-Extraktion...");
 
         // Fächer abgreifen mit optimierter Logik
-        subjects.evp1 = await scrapeSubjectContent('EVP', 0);
-        subjects.deutsch = await scrapeSubjectContent(/^D$/, 0); // RegEx für exaktes "D"
         subjects.stdm = await scrapeSubjectContent('STDM', 0);
-        subjects.kryp = await scrapeSubjectContent('KRYP', 0);
-        subjects.gid = await scrapeSubjectContent('GID', 0);
+        subjects.evp = await scrapeSubjectContent('EVP', 0);
+        subjects.sport = await scrapeSubjectContent('SP', 0);
         subjects.englisch = await scrapeSubjectContent(/^E$/, 0); // RegEx für exaktes "E"
-        subjects.evp2 = await scrapeSubjectContent('EVP', 1);
-
+        subjects.deutsch = await scrapeSubjectContent(/^D$/, 0); // RegEx für exaktes "D"
+        subjects.dkrypt = await scrapeSubjectContent('D-KRYPT', 0);
+        subjects.wbl = await scrapeSubjectContent('WBL', 0);
         console.log("Extraktion beendet:", subjects);
 
         // Firebase-Logik

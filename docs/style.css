@@ -544,38 +544,53 @@ textarea:focus {
         grid-template-columns: 1fr;
     }
 }
+
 /* LAMP STYLES */
 .status-lamp {
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    margin-left: auto; /* Push to right if in flex */
     margin-right: 15px;
-    background-color: #ccc; /* Default gray/loading */
-    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+    background-color: #ccc;
+    /* Default gray/loading */
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
     transition: all 0.3s ease;
     cursor: help;
     flex-shrink: 0;
 }
 
 .status-lamp.green {
-    background-color: #4ade80; /* Tailwind Green 400 */
+    background-color: #4ade80;
+    /* Tailwind Green 400 */
     box-shadow: 0 0 10px #4ade80, 0 0 20px #4ade80;
 }
 
 .status-lamp.yellow {
-    background-color: #facc15; /* Tailwind Yellow 400 */
+    background-color: #facc15;
+    /* Tailwind Yellow 400 */
     box-shadow: 0 0 10px #facc15, 0 0 20px #facc15;
 }
 
 .status-lamp.red {
-    background-color: #f87171; /* Tailwind Red 400 */
+    background-color: #f87171;
+    /* Tailwind Red 400 */
     box-shadow: 0 0 10px #f87171, 0 0 20px #f87171;
     animation: pulse-red 2s infinite;
 }
 
 @keyframes pulse-red {
-    0% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.1); opacity: 0.8; }
-    100% { transform: scale(1); opacity: 1; }
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.1);
+        opacity: 0.8;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
 }

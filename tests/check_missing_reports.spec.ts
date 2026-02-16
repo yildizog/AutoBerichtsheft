@@ -178,10 +178,41 @@ test('Check for missing reports', async ({ page }) => {
         }
     };
 
-    // Save to docs/status.json
-    const outputPath = path.join(__dirname, '../docs/status.json');
-    fs.writeFileSync(outputPath, JSON.stringify(output, null, 2));
-    console.log(`Status saved to ${outputPath}:`, output);
+    // Save to Firebase Database
+    const firebaseURL = process.env.FIREBASE_URL;
+    const firebaseKey = process.env.FIREBASE_KEY;
+
+    if (firebaseURL && firebaseKey) {
+        // Remove trailing slash if present
+        const cleanUrl = firebaseURL.endsWith('/') ? firebaseURL.slice(0, -1) : firebaseURL;
+        const statusUrl = `${cleanUrl}/status.json?auth=${firebaseKey}`;
+
+        try {
+            console.log("Saving status to Firebase...");
+            const response = await fetch(statusUrl, {
+                method: 'PUT',
+                body: JSON.stringify(output),
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (response.ok) {
+                console.log("Status successfully saved to Firebase.");
+            } else {
+                console.error(`Failed to save to Firebase: ${response.status} ${response.statusText}`);
+                const errText = await response.text();
+                console.error("Firebase response:", errText);
+            }
+        } catch (err) {
+            console.error("Error saving to Firebase:", err);
+        }
+    } else {
+        console.warn("FIREBASE_URL or FIREBASE_KEY missing in .env. Skipping Firebase update.");
+
+        // Fallback: Still save locally for debugging/legacy reasons if needed, or just log
+        const outputPath = path.join(__dirname, '../docs/status.json');
+        fs.writeFileSync(outputPath, JSON.stringify(output, null, 2));
+        console.log(`(Fallback) Status saved to ${outputPath}`);
+    }
 
     // 5. Send Alert if RED (Missing Reports)
     if (missingWeeks.length > 0) {

@@ -29,8 +29,10 @@
         <div id="appContent" class="hidden">
             <header>
                 <h1>📚 Berichtsheft Manager</h1>
-                <div id="statusLamp" class="status-lamp" title="Lade Status..."></div>
-                <button class="logout-btn" onclick="logout()">Logout</button>
+                <div style="display:flex; align-items:center;">
+                    <div id="statusLamp" class="status-lamp" title="Lade Status..."></div>
+                    <button class="logout-btn" onclick="logout()">Logout</button>
+                </div>
             </header>
 
             <div id="view-list">
@@ -85,20 +87,16 @@
                             <button class="btn-sick" onclick="setSick('montag')">🤒 Krank</button>
                         </div>
                         <div class="subject-box">
-                            <div class="box-header"><span>EVP</span><input type="checkbox" class="subject-select"
-                                    data-id="evp1" checked></div><textarea id="evp1"></textarea>
-                        </div>
-                        <div class="subject-box">
-                            <div class="box-header"><span>Deutsch</span><input type="checkbox" class="subject-select"
-                                    data-id="deutsch" checked></div><textarea id="deutsch"></textarea>
-                        </div>
-                        <div class="subject-box">
                             <div class="box-header"><span>STDM</span><input type="checkbox" class="subject-select"
                                     data-id="stdm" checked></div><textarea id="stdm"></textarea>
                         </div>
                         <div class="subject-box">
-                            <div class="box-header"><span>Kryptologie</span><input type="checkbox"
-                                    class="subject-select" data-id="kryp" checked></div><textarea id="kryp"></textarea>
+                            <div class="box-header"><span>EVP</span><input type="checkbox" class="subject-select"
+                                    data-id="evp" checked></div><textarea id="evp"></textarea>
+                        </div>
+                        <div class="subject-box">
+                            <div class="box-header"><span>Sport</span><input type="checkbox" class="subject-select"
+                                    data-id="sport" checked></div><textarea id="sport"></textarea>
                         </div>
                     </div>
 
@@ -108,17 +106,22 @@
                             <button class="btn-sick" onclick="setSick('freitag')">🤒 Krank</button>
                         </div>
                         <div class="subject-box">
-                            <div class="box-header"><span>GID</span><input type="checkbox" class="subject-select"
-                                    data-id="gid" checked></div><textarea id="gid"></textarea>
+                            <div class="box-header"><span>WBL</span><input type="checkbox" class="subject-select"
+                                    data-id="wbl" checked></div><textarea id="wbl"></textarea>
                         </div>
                         <div class="subject-box">
                             <div class="box-header"><span>Englisch</span><input type="checkbox" class="subject-select"
                                     data-id="englisch" checked></div><textarea id="englisch"></textarea>
                         </div>
                         <div class="subject-box">
-                            <div class="box-header"><span>EVP (2)</span><input type="checkbox" class="subject-select"
-                                    data-id="evp2" checked></div><textarea id="evp2"></textarea>
+                            <div class="box-header"><span>Deutsch</span><input type="checkbox" class="subject-select"
+                                    data-id="deutsch" checked></div><textarea id="deutsch"></textarea>
                         </div>
+                        <div class="subject-box">
+                            <div class="box-header"><span>D-KRYPT</span><input type="checkbox" class="subject-select"
+                                    data-id="dkrypt" checked></div><textarea id="dkrypt"></textarea>
+                        </div>
+
                     </div>
                 </div>
 

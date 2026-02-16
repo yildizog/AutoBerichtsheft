@@ -12,8 +12,9 @@ test('Teil 2: IHK Upload', async ({ page }) => {
     if (reportId) await updateStatus(reportId, 'running', 'Upload gestartet...');
 
     // Objekt initialisieren (inkl. dem neuen Feld workActivities und sickDays)
+    // Objekt initialisieren
     let contentObj = {
-        evp1: '', deutsch: '', stdm: '', kryp: '', gid: '', englisch: '', evp2: '',
+        stdm: '', deutsch: '', evp: '', sport: '', wbl: '', englisch: '', dkrypt: '',
         workActivities: '',
         sickDays: { montag: false, freitag: false } // NEU
     };
@@ -28,9 +29,11 @@ test('Teil 2: IHK Upload', async ({ page }) => {
     }
 
     // --- LOGIK FÜR SCHULINHALTE (Krank-Handling) ---
-    let montagContent = `Montag:\nEntwicklung Vernetzter Prozesse: ${contentObj.evp1}\nDeutsch: ${contentObj.deutsch}\nSoftwaretechnologie und Datenmanagment: ${contentObj.stdm}\nKryptologie: ${contentObj.kryp}`;
+    // Montag: STDM, EVP, Sport
+    let montagContent = `Montag:\nSoftwaretechnologie und Datenmanagment: ${contentObj.stdm}\nEntwicklung Vernetzter Prozesse: ${contentObj.evp}\nSport: ${contentObj.sport}`;
 
-    let freitagContent = `Freitag:\nGestaltung It Dienstleitungen: ${contentObj.gid}\nEnglisch: ${contentObj.englisch}\nEntwicklung Vernetzter Prozesse: ${contentObj.evp2}`;
+    // Freitag: WBL, Englisch, Deutsch, D-Krypt
+    let freitagContent = `Freitag:\nWBL: ${contentObj.wbl}\nEnglisch: ${contentObj.englisch}\nDeutsch: ${contentObj.deutsch}\nD-KRYPT: ${contentObj.dkrypt}`;
 
     // Wenn Montag krank ist, alles überschreiben
     if (contentObj.sickDays && contentObj.sickDays.montag) {

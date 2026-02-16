@@ -16,37 +16,34 @@ function showApp() {
     fetchGithubRuns();
     fetchStatus(); // Check status on load
     setInterval(fetchGithubRuns, 10000); // Update GitHub runs
-    setInterval(fetchStatus, 60000 * 5); // Check status every 5 mins
+    // setInterval(fetchStatus, 60000 * 5); // Status updates are now real-time via Firebase on() listener
 }
 
 // --- STATUS LAMP LOGIK ---
 async function fetchStatus() {
     const lamp = document.getElementById('statusLamp');
-    try {
-        // Cache busting to get fresh status
-        const res = await fetch('status.json?t=' + new Date().getTime());
-        if (!res.ok) throw new Error("Status file not found");
 
-        const data = await res.json();
+    // Use Firebase Realtime Database listener
+    db.ref('status').on('value', (snapshot) => {
+        const data = snapshot.val();
 
         // Remove old classes
         lamp.classList.remove('green', 'yellow', 'red');
 
-        // Add new class
-        if (data.status) {
+        if (data && data.status) {
             lamp.classList.add(data.status);
             lamp.title = `Status: ${data.message} (Stand: ${new Date(data.lastChecked).toLocaleString()})`;
+            lamp.style.backgroundColor = ''; // Reset explicit background if class sets it
         } else {
             lamp.style.backgroundColor = '#ccc';
-            lamp.title = "Status unbekannt";
+            lamp.title = "Status unbekannt (Keine Daten in DB)";
         }
-
-    } catch (e) {
-        console.warn("Could not fetch status:", e);
+    }, (error) => {
+        console.warn("Could not fetch status from Firebase:", error);
         lamp.classList.remove('green', 'yellow', 'red');
         lamp.style.backgroundColor = '#ccc';
-        lamp.title = "Status-Datei nicht gefunden (noch kein Scrape?)";
-    }
+        lamp.title = "Fehler beim Laden des Status";
+    });
 }
 
 
@@ -197,7 +194,7 @@ function openDetail(id) {
     updateSickUI('freitag');
 
     // Felder füllen
-    const fields = ['evp1', 'deutsch', 'stdm', 'kryp', 'gid', 'englisch', 'evp2'];
+    const fields = ['stdm', 'evp', 'sport', 'wbl', 'englisch', 'deutsch', 'dkrypt'];
     fields.forEach(f => {
         const el = document.getElementById(f);
         if (el) el.value = d.content ? d.content[f] || '' : '';
@@ -221,8 +218,8 @@ async function refineSchoolWithAI() {
     const ids = Array.from(document.querySelectorAll('.subject-select:checked')).map(cb => cb.getAttribute('data-id'))
         .filter(id => {
             // Filter raus wenn Tag krank
-            if (sickDays.montag && ['evp1', 'deutsch', 'stdm', 'kryp'].includes(id)) return false;
-            if (sickDays.freitag && ['gid', 'englisch', 'evp2'].includes(id)) return false;
+            if (sickDays.montag && ['stdm', 'evp', 'sport'].includes(id)) return false;
+            if (sickDays.freitag && ['wbl', 'englisch', 'deutsch', 'dkrypt'].includes(id)) return false;
             return true;
         });
 
@@ -288,13 +285,13 @@ function triggerUpload() {
     const token = localStorage.getItem('gh_token');
 
     const content = {
-        evp1: document.getElementById('evp1').value,
-        deutsch: document.getElementById('deutsch').value,
         stdm: document.getElementById('stdm').value,
-        kryp: document.getElementById('kryp').value,
-        gid: document.getElementById('gid').value,
+        evp: document.getElementById('evp').value,
+        sport: document.getElementById('sport').value,
+        wbl: document.getElementById('wbl').value,
         englisch: document.getElementById('englisch').value,
-        evp2: document.getElementById('evp2').value,
+        deutsch: document.getElementById('deutsch').value,
+        dkrypt: document.getElementById('dkrypt').value,
         workActivities: document.getElementById('workActivities').value,
         sickDays: sickDays // NEU: Krank-Status mitsenden
     };
@@ -319,8 +316,8 @@ function setSick(day) {
 function updateSickUI(day) {
     const isSick = sickDays[day];
     const mapping = {
-        'montag': ['evp1', 'deutsch', 'stdm', 'kryp'],
-        'freitag': ['gid', 'englisch', 'evp2']
+        'montag': ['stdm', 'evp', 'sport'],
+        'freitag': ['wbl', 'englisch', 'deutsch', 'dkrypt']
     };
 
     // UI Anpassungen
