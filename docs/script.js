@@ -21,28 +21,46 @@ function showApp() {
 
 // --- STATUS LAMP LOGIK ---
 async function fetchStatus() {
-    const lamp = document.getElementById('statusLamp');
+    const statusSubmitted = document.getElementById('statusSubmitted');
+    const statusApproved = document.getElementById('statusApproved');
 
     // Use Firebase Realtime Database listener
     db.ref('status').on('value', (snapshot) => {
         const data = snapshot.val();
 
-        // Remove old classes
-        lamp.classList.remove('green', 'yellow', 'red');
+        // Reset classes
+        statusSubmitted.className = 'status-pill';
+        statusApproved.className = 'status-pill';
 
-        if (data && data.status) {
-            lamp.classList.add(data.status);
-            lamp.title = `Status: ${data.message} (Stand: ${new Date(data.lastChecked).toLocaleString()})`;
-            lamp.style.backgroundColor = ''; // Reset explicit background if class sets it
+        if (data) {
+            // Logic 1: Submitted Status
+            // If missingCount > 0 -> RED
+            // Else -> GREEN
+            if (data.missingCount > 0) {
+                statusSubmitted.classList.add('red');
+                statusSubmitted.title = `${data.missingCount} Berichte fehlen!`;
+            } else {
+                statusSubmitted.classList.add('green');
+                statusSubmitted.title = "Alle Berichte sind eingetragen.";
+            }
+
+            // Logic 2: Approved Status
+            // If pendingCount > 0 -> YELLOW
+            // Else -> GREEN
+            if (data.pendingCount > 0) {
+                statusApproved.classList.add('yellow');
+                statusApproved.title = `${data.pendingCount} Berichte warten auf Genehmigung.`;
+            } else {
+                statusApproved.classList.add('green');
+                statusApproved.title = "Alle Berichte genehmigt.";
+            }
+
         } else {
-            lamp.style.backgroundColor = '#ccc';
-            lamp.title = "Status unbekannt (Keine Daten in DB)";
+            statusSubmitted.title = "Status unbekannt";
+            statusApproved.title = "Status unbekannt";
         }
     }, (error) => {
         console.warn("Could not fetch status from Firebase:", error);
-        lamp.classList.remove('green', 'yellow', 'red');
-        lamp.style.backgroundColor = '#ccc';
-        lamp.title = "Fehler beim Laden des Status";
     });
 }
 

@@ -30,7 +30,14 @@
             <header>
                 <h1>📚 Berichtsheft Manager</h1>
                 <div style="display:flex; align-items:center;">
-                    <div id="statusLamp" class="status-lamp" title="Lade Status..."></div>
+                    <div class="status-group">
+                        <div id="statusSubmitted" class="status-pill" title="Lade Status...">
+                            <span class="indicator"></span> Eintragung
+                        </div>
+                        <div id="statusApproved" class="status-pill" title="Lade Status...">
+                            <span class="indicator"></span> Genehmigung
+                        </div>
+                    </div>
                     <button class="logout-btn" onclick="logout()">Logout</button>
                 </div>
             </header>
