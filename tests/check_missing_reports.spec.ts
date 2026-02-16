@@ -214,7 +214,8 @@ test('Check for missing reports', async ({ page }) => {
         console.warn("FIREBASE_URL or FIREBASE_KEY missing in .env. Skipping Firebase update.");
 
         // Fallback: Still save locally for debugging/legacy reasons if needed, or just log
-        const outputPath = path.join(__dirname, '../docs/status.json');
+        // Fix: __dirname is not available in ES modules/Playwright context sometimes, use process.cwd()
+        const outputPath = path.resolve(process.cwd(), 'docs/status.json');
         fs.writeFileSync(outputPath, JSON.stringify(output, null, 2));
         console.log(`(Fallback) Status saved to ${outputPath}`);
     }
