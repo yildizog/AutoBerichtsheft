@@ -185,7 +185,7 @@ test('Check for missing reports', async ({ page }) => {
 
     // Save to Firebase Database
     const firebaseURL = process.env.FIREBASE_URL;
-    const firebaseKey = process.env.FIREBASE_KEY;
+    const firebaseKey = process.env.FIREBASE_SECRET || process.env.FIREBASE_KEY;
 
     if (firebaseURL && firebaseKey) {
         // Remove trailing slash if present

@@ -37,5 +37,5 @@ jobs:
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
           FIREBASE_URL: ${{ secrets.FIREBASE_URL }}
-          FIREBASE_KEY: ${{ secrets.FIREBASE_KEY }}
+          FIREBASE_SECRET: ${{ secrets.FIREBASE_SECRET }}
         run: npx playwright test tests/check_missing_reports.spec.ts
