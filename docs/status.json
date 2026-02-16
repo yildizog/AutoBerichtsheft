@@ -1,0 +1,16 @@
+{
+  "status": "red",
+  "lastChecked": "2026-02-16T17:09:35.730Z",
+  "missingCount": 1,
+  "pendingCount": 2,
+  "message": "1 Berichte fehlen!",
+  "details": {
+    "missing": [
+      "2026-02-09"
+    ],
+    "pending": [
+      "2024-07-29",
+      "2026-02-02"
+    ]
+  }
+}
