@@ -10,6 +10,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (gh && ai) { showApp(); } else { document.getElementById('authSection').classList.remove('hidden'); }
 });
 
+// Initialisiere Firebase (Sollte nach config.js, aber vor deinem Haupt-Code stehen)
+firebase.initializeApp({
+    databaseURL: CONFIG.FIREBASE.databaseURL
+});
+
+// Das ist die Variable 'db', die dein Skript überall aufruft
+const db = firebase.database();
+
 function showApp() {
     document.getElementById('appContent').classList.remove('hidden');
     listenToReports();
