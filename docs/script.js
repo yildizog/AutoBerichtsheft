@@ -85,7 +85,7 @@ async function fetchGithubRuns() {
         const data = await res.json();
 
         if (!data.workflow_runs || data.workflow_runs.length === 0) {
-            container.innerHTML = '<p style="text-align:center; color:var(--text-muted);">Keine aktiven Jobs.</p>';
+            container.innerHTML = '<p class="placeholder">Keine aktiven Jobs</p>';
             return;
         }
 
@@ -99,8 +99,9 @@ async function fetchGithubRuns() {
         if (run.status === "in_progress" || run.status === "queued") {
             jobInfo = await fetchJobDetails(run.id, token);
         } else {
-            const icon = run.conclusion === 'success' ? '✅' : '❌';
-            jobInfo = `<div class="timeline-item completed"><span class="timeline-icon">${icon}</span> Job beendet: ${run.conclusion}</div>`;
+            const iconId = run.conclusion === 'success' ? 'i-check' : 'i-x';
+            const cls = run.conclusion === 'success' ? 'completed' : 'failed';
+            jobInfo = `<div class="timeline-item ${cls}"><span class="timeline-icon"><svg class="icon icon-sm"><use href="#${iconId}"/></svg></span><div class="timeline-content"><span class="step-name">Job beendet: ${run.conclusion}</span></div></div>`;
         }
 
         const time = new Date(run.created_at).toLocaleString('de-DE', { hour: '2-digit', minute: '2-digit' });
@@ -108,8 +109,8 @@ async function fetchGithubRuns() {
         card.innerHTML = `
             <div class="run-header">
                 <div>
-                    <strong style="color:var(--accent); font-size:1.1rem;">${run.name}</strong>
-                    <div style="font-size:0.8rem; color:var(--text-muted);">Gestartet um ${time} Uhr</div>
+                    <strong>${run.name}</strong>
+                    <div class="run-meta">Gestartet um ${time} Uhr</div>
                 </div>
                 <span class="badge ${run.status}">${run.status}</span>
             </div>
@@ -134,19 +135,19 @@ async function fetchJobDetails(runId, token) {
         data.jobs.forEach(job => {
             html += `<div class="timeline-job-title">${job.name}</div>`;
             job.steps.forEach(step => {
-                let statusIcon = '⚪️';
+                let iconId = 'i-circle';
                 let statusClass = 'pending';
                 if (step.status === 'completed') {
-                    statusIcon = '✅';
+                    iconId = 'i-check';
                     statusClass = 'completed';
-                    if (step.conclusion === 'failure') statusIcon = '❌';
+                    if (step.conclusion === 'failure') { iconId = 'i-x'; statusClass = 'failed'; }
                 } else if (step.status === 'in_progress') {
-                    statusIcon = '⏳';
+                    iconId = 'i-loader';
                     statusClass = 'running';
                 }
                 html += `
                     <div class="timeline-item ${statusClass}">
-                        <span class="timeline-icon">${statusIcon}</span>
+                        <span class="timeline-icon"><svg class="icon icon-sm"><use href="#${iconId}"/></svg></span>
                         <div class="timeline-content">
                             <span class="step-name">${step.name}</span>
                         </div>
@@ -186,33 +187,38 @@ function renderReportList() {
     sortedReportsList.forEach(r => {
         const li = document.createElement('li');
         li.className = 'process-item';
+        li.classList.add('status-' + (r.status || 'waiting'));
         li.onclick = () => openDetail(r.id);
 
         let statusLabel = r.status;
-        let badgeClass = r.status || 'waiting'; // default
+        let badgeClass = r.status || 'waiting';
 
-        // Check if report is in pending list (from IHK Status)
         if (pendingWeeks.includes(r.id)) {
-            statusLabel = "Genehmigung ausstehend";
+            statusLabel = "Ausstehend";
             badgeClass = "pending-approval";
-            li.classList.add('is-pending'); // Add class for styling border if needed
+            li.classList.add('is-pending');
         } else {
-            // Normal mappings
             if (r.status === 'success') statusLabel = 'Erledigt';
             if (r.status === 'waiting') statusLabel = 'In Bearbeitung';
         }
 
+        const kwMatch = (r.dateLabel || '').match(/KW\s*(\d+)/i);
+        const kwLabel = kwMatch ? `KW ${kwMatch[1].padStart(2, '0')}` : (r.id || '');
+        const title = r.dateLabel || `Woche ${r.id}`;
+
         li.innerHTML = `
-            <div style="width:100%">
-                <div class="item-header">
-                    <div class="item-title">📄 ${r.dateLabel || "Woche " + r.id}</div>
-                    <span class="badge ${badgeClass}">${statusLabel}</span>
+            <div class="item-header">
+                <div>
+                    <div class="item-title">${title}</div>
+                    <div class="item-kw">${kwLabel}</div>
                 </div>
-                <div class="item-date">📅 Erstellt: ${r.createdAt}</div>
-                <div style="margin-top:15px; font-size:0.8rem; color:var(--text-muted);">
-                    Klicken zum Bearbeiten
-                </div>
+                <span class="badge ${badgeClass}">${statusLabel}</span>
             </div>
+            <div class="item-meta">
+                <svg class="icon"><use href="#i-calendar"/></svg>
+                ${r.createdAt || '—'}
+            </div>
+            <div class="item-footer">Bearbeiten →</div>
         `;
         list.appendChild(li);
     });
@@ -265,7 +271,7 @@ async function refineSchoolWithAI() {
     const data = {};
     ids.forEach(id => data[id] = document.getElementById(id).value);
 
-    btn.innerHTML = "⏳ Läuft...";
+    btn.innerHTML = `<svg class="icon icon-sm"><use href="#i-loader"/></svg> Läuft…`;
 
     try {
         const list = await (await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`)).json();
@@ -284,7 +290,7 @@ async function refineSchoolWithAI() {
         Object.keys(corrected).forEach(id => { if (document.getElementById(id)) document.getElementById(id).value = corrected[id]; });
         alert("Fertig!");
     } catch (e) { alert("KI Fehler: " + e.message); }
-    finally { btn.innerHTML = "🪄 KI Korrektur"; }
+    finally { btn.innerHTML = `<svg class="icon icon-sm"><use href="#i-sparkles"/></svg> KI Korrektur`; }
 }
 
 // RESTLICHE FUNKTIONEN
@@ -361,10 +367,10 @@ function updateSickUI(day) {
     const btn = document.querySelector(`button[onclick="setSick('${day}')"]`);
     if (btn) {
         if (isSick) {
-            btn.innerHTML = "✅ Als Krank markiert";
+            btn.innerHTML = `<svg class="icon icon-sm"><use href="#i-check"/></svg><span class="btn-sick-label">Als Krank markiert</span>`;
             btn.classList.add('active-sick');
         } else {
-            btn.innerHTML = "🤒 Krank";
+            btn.innerHTML = `<svg class="icon icon-sm"><use href="#i-thermometer"/></svg><span class="btn-sick-label">Krank</span>`;
             btn.classList.remove('active-sick');
         }
     }

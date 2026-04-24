@@ -5,8 +5,11 @@
     <link rel="icon" type="image/x-icon" href="./favicon.ico">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AutoBerichtsheft Pro</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>AutoBerichtsheft</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -14,22 +17,150 @@
 
 <body>
 
+    <!-- Inline SVG Icon Sprite (Lucide-style) -->
+    <svg xmlns="http://www.w3.org/2000/svg" style="display:none;">
+        <defs>
+            <symbol id="i-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+            </symbol>
+            <symbol id="i-school" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z" />
+                <path d="M22 10v6" />
+                <path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5" />
+            </symbol>
+            <symbol id="i-briefcase" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+                <rect width="20" height="14" x="2" y="6" rx="2" />
+            </symbol>
+            <symbol id="i-zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" />
+            </symbol>
+            <symbol id="i-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z" />
+                <path d="M20 3v4" />
+                <path d="M22 5h-4" />
+                <path d="M4 17v2" />
+                <path d="M5 18H3" />
+            </symbol>
+            <symbol id="i-thermometer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z" />
+            </symbol>
+            <symbol id="i-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 13v8" />
+                <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" />
+                <path d="m8 17 4-4 4 4" />
+            </symbol>
+            <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                <path d="M21 3v5h-5" />
+                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                <path d="M8 16H3v5" />
+            </symbol>
+            <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14" />
+                <path d="M12 5v14" />
+            </symbol>
+            <symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z" />
+                <circle cx="16.5" cy="7.5" r=".5" fill="currentColor" />
+            </symbol>
+            <symbol id="i-arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="m12 19-7-7 7-7" />
+                <path d="M19 12H5" />
+            </symbol>
+            <symbol id="i-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="m16 17 5-5-5-5" />
+                <path d="M21 12H9" />
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            </symbol>
+            <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 6 9 17l-5-5" />
+            </symbol>
+            <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+            </symbol>
+            <symbol id="i-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="9" />
+            </symbol>
+            <symbol id="i-loader" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2v4" />
+                <path d="m16.2 7.8 2.9-2.9" />
+                <path d="M18 12h4" />
+                <path d="m16.2 16.2 2.9 2.9" />
+                <path d="M12 18v4" />
+                <path d="m4.9 19.1 2.9-2.9" />
+                <path d="M2 12h4" />
+                <path d="m4.9 4.9 2.9 2.9" />
+            </symbol>
+            <symbol id="i-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 2v4" />
+                <path d="M16 2v4" />
+                <rect width="18" height="18" x="3" y="4" rx="2" />
+                <path d="M3 10h18" />
+            </symbol>
+            <symbol id="i-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+                <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+            </symbol>
+        </defs>
+    </svg>
+
     <div id="toast-container"></div>
 
     <div class="container">
         <div id="authSection" class="hidden">
             <div class="auth-card">
-                <h2>🔐 Login & Setup</h2>
-                <input type="password" id="ghTokenInput" class="token-input" placeholder="GitHub Access Token">
-                <input type="password" id="geminiTokenInput" class="token-input" placeholder="Gemini API Key">
-                <button class="btn-hero" style="width:100%" onclick="saveTokenAndLogin()">Starten</button>
+                <div class="auth-mark">
+                    <svg class="icon icon-xl"><use href="#i-book" /></svg>
+                </div>
+                <h2 class="auth-title">AutoBerichtsheft</h2>
+                <p class="auth-sub">Zugriff einrichten, um loszulegen</p>
+                <label class="field">
+                    <span class="field-label">GitHub Access Token</span>
+                    <input type="password" id="ghTokenInput" class="token-input" placeholder="ghp_••••••••">
+                </label>
+                <label class="field">
+                    <span class="field-label">Gemini API Key</span>
+                    <input type="password" id="geminiTokenInput" class="token-input" placeholder="AIza••••••••">
+                </label>
+                <button class="btn-hero btn-block" onclick="saveTokenAndLogin()">
+                    <svg class="icon"><use href="#i-key" /></svg>
+                    Starten
+                </button>
             </div>
         </div>
 
         <div id="appContent" class="hidden">
             <header>
-                <h1>📚 Berichtsheft Manager</h1>
-                <div style="display:flex; align-items:center;">
+                <div class="brand">
+                    <div class="brand-mark">
+                        <svg class="icon"><use href="#i-book" /></svg>
+                    </div>
+                    <div class="brand-text">
+                        <h1>Berichtsheft</h1>
+                        <span class="brand-sub">Manager</span>
+                    </div>
+                </div>
+                <div class="header-actions">
                     <div class="status-group">
                         <div id="statusSubmitted" class="status-pill" title="Lade Status...">
                             <span class="indicator"></span> Eintragung
@@ -38,30 +169,39 @@
                             <span class="indicator"></span> Genehmigung
                         </div>
                     </div>
-                    <button class="logout-btn" onclick="logout()">Logout</button>
+                    <button class="logout-btn" onclick="logout()" title="Logout">
+                        <svg class="icon icon-sm"><use href="#i-logout" /></svg>
+                    </button>
                 </div>
             </header>
 
             <div id="view-list">
                 <div class="status-dashboard">
                     <div class="section-header">
-                        <h3 class="section-title">⚡ Live Automation Status</h3>
-                        <button class="refresh-btn" onclick="fetchGithubRuns()">🔄</button>
+                        <h3 class="section-title">
+                            <svg class="icon icon-accent"><use href="#i-zap" /></svg>
+                            Live Automation
+                        </h3>
+                        <button class="refresh-btn" onclick="fetchGithubRuns()" title="Aktualisieren">
+                            <svg class="icon icon-sm"><use href="#i-refresh" /></svg>
+                        </button>
                     </div>
                     <div id="gh-run-status" class="run-container">
-                        <p style="text-align:center; color: var(--text-muted);">Lade GitHub Status...</p>
+                        <p class="placeholder">Lade GitHub Status…</p>
                     </div>
                 </div>
 
                 <div class="view-header">
                     <div>
                         <h2>Berichts-Archiv</h2>
-                        <p class="subtitle">Wähle eine Woche zum Bearbeiten</p>
+                        <p class="subtitle">Woche auswählen, um Inhalte zu bearbeiten</p>
                     </div>
-                    <div style="display:flex; gap:10px;">
-                        <input type="date" id="scrapeDateInput" class="badge"
-                            style="background:var(--bg-input); color:white; border:1px solid var(--border); padding:10px;">
-                        <button class="btn-hero" onclick="triggerScrape()">✨ Neue Woche holen</button>
+                    <div class="view-controls">
+                        <input type="date" id="scrapeDateInput" class="date-input">
+                        <button class="btn-hero" onclick="triggerScrape()">
+                            <svg class="icon"><use href="#i-plus" /></svg>
+                            Neue Woche holen
+                        </button>
                     </div>
                 </div>
                 <ul id="reportList" class="process-list"></ul>
@@ -69,80 +209,132 @@
 
             <div id="view-detail" class="hidden">
                 <div class="detail-header">
-                    <button class="back-btn" onclick="showList()">← Zurück</button>
-                    <h2 id="detailTitle">...</h2>
-                    <span id="detailStatus" class="badge">...</span>
+                    <button class="back-btn" onclick="showList()">
+                        <svg class="icon icon-sm"><use href="#i-arrow-left" /></svg>
+                        Zurück
+                    </button>
+                    <h2 id="detailTitle">…</h2>
+                    <span id="detailStatus" class="badge">…</span>
                 </div>
 
-                <div class="section-header">
-                    <div style="display:flex; align-items:center; gap:16px;">
-                        <h3 class="section-title">🏫 Berufsschule</h3>
-                        <label class="select-all-label"
-                            style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                            <input type="checkbox" id="selectAllSubjects" checked
-                                onclick="toggleAllSubjects(this.checked)"> Alle
-                        </label>
-                    </div>
-                    <button id="btnAISchool" class="btn-ai btn-secondary" onclick="refineSchoolWithAI()">🪄 KI
-                        Korrektur</button>
-                </div>
-
-                <div class="days-wrapper">
-                    <div class="day-column">
-                        <div class="day-header">
-                            <h4 class="day-title">Montag</h4>
-                            <button class="btn-sick" onclick="setSick('montag')">🤒 Krank</button>
-                        </div>
-                        <div class="subject-box">
-                            <div class="box-header"><span>STDM</span><input type="checkbox" class="subject-select"
-                                    data-id="stdm" checked></div><textarea id="stdm"></textarea>
-                        </div>
-                        <div class="subject-box">
-                            <div class="box-header"><span>EVP</span><input type="checkbox" class="subject-select"
-                                    data-id="evp" checked></div><textarea id="evp"></textarea>
-                        </div>
-                        <div class="subject-box">
-                            <div class="box-header"><span>Sport</span><input type="checkbox" class="subject-select"
-                                    data-id="sport" checked></div><textarea id="sport"></textarea>
-                        </div>
-                    </div>
-
-                    <div class="day-column">
-                        <div class="day-header">
-                            <h4 class="day-title">Freitag</h4>
-                            <button class="btn-sick" onclick="setSick('freitag')">🤒 Krank</button>
-                        </div>
-                        <div class="subject-box">
-                            <div class="box-header"><span>WBL</span><input type="checkbox" class="subject-select"
-                                    data-id="wbl" checked></div><textarea id="wbl"></textarea>
-                        </div>
-                        <div class="subject-box">
-                            <div class="box-header"><span>Englisch</span><input type="checkbox" class="subject-select"
-                                    data-id="englisch" checked></div><textarea id="englisch"></textarea>
-                        </div>
-                        <div class="subject-box">
-                            <div class="box-header"><span>Deutsch</span><input type="checkbox" class="subject-select"
-                                    data-id="deutsch" checked></div><textarea id="deutsch"></textarea>
-                        </div>
-                        <div class="subject-box">
-                            <div class="box-header"><span>D-KRYPT</span><input type="checkbox" class="subject-select"
-                                    data-id="dkrypt" checked></div><textarea id="dkrypt"></textarea>
-                        </div>
-
-                    </div>
-                </div>
-
-                <div class="full-width-box">
+                <div class="panel">
                     <div class="section-header">
-                        <h3 class="section-title">🛠️ Betriebliche Tätigkeiten</h3>
-                        <button id="btnAI" class="btn-ai" onclick="refineWithAI()">🪄 KI Überarbeiten</button>
+                        <div class="section-title-group">
+                            <h3 class="section-title">
+                                <svg class="icon icon-accent"><use href="#i-school" /></svg>
+                                Berufsschule
+                            </h3>
+                            <label class="select-all-label">
+                                <input type="checkbox" id="selectAllSubjects" checked
+                                    onclick="toggleAllSubjects(this.checked)">
+                                <span>Alle auswählen</span>
+                            </label>
+                        </div>
+                        <button id="btnAISchool" class="btn-ai" onclick="refineSchoolWithAI()">
+                            <svg class="icon icon-sm"><use href="#i-sparkles" /></svg>
+                            KI Korrektur
+                        </button>
                     </div>
-                    <textarea id="workActivities" placeholder="Stichpunkte hier..."></textarea>
+
+                    <div class="days-wrapper">
+                        <div class="day-column">
+                            <div class="day-header">
+                                <div class="day-label">
+                                    <span class="day-index">01</span>
+                                    <h4 class="day-title">Montag</h4>
+                                </div>
+                                <button class="btn-sick" onclick="setSick('montag')">
+                                    <svg class="icon icon-sm"><use href="#i-thermometer" /></svg>
+                                    <span class="btn-sick-label">Krank</span>
+                                </button>
+                            </div>
+                            <div class="subject-box" data-accent="indigo">
+                                <div class="box-header">
+                                    <span>STDM</span>
+                                    <input type="checkbox" class="subject-select" data-id="stdm" checked>
+                                </div>
+                                <textarea id="stdm"></textarea>
+                            </div>
+                            <div class="subject-box" data-accent="cyan">
+                                <div class="box-header">
+                                    <span>EVP</span>
+                                    <input type="checkbox" class="subject-select" data-id="evp" checked>
+                                </div>
+                                <textarea id="evp"></textarea>
+                            </div>
+                            <div class="subject-box" data-accent="emerald">
+                                <div class="box-header">
+                                    <span>Sport</span>
+                                    <input type="checkbox" class="subject-select" data-id="sport" checked>
+                                </div>
+                                <textarea id="sport"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="day-column">
+                            <div class="day-header">
+                                <div class="day-label">
+                                    <span class="day-index">05</span>
+                                    <h4 class="day-title">Freitag</h4>
+                                </div>
+                                <button class="btn-sick" onclick="setSick('freitag')">
+                                    <svg class="icon icon-sm"><use href="#i-thermometer" /></svg>
+                                    <span class="btn-sick-label">Krank</span>
+                                </button>
+                            </div>
+                            <div class="subject-box" data-accent="amber">
+                                <div class="box-header">
+                                    <span>WBL</span>
+                                    <input type="checkbox" class="subject-select" data-id="wbl" checked>
+                                </div>
+                                <textarea id="wbl"></textarea>
+                            </div>
+                            <div class="subject-box" data-accent="rose">
+                                <div class="box-header">
+                                    <span>Englisch</span>
+                                    <input type="checkbox" class="subject-select" data-id="englisch" checked>
+                                </div>
+                                <textarea id="englisch"></textarea>
+                            </div>
+                            <div class="subject-box" data-accent="violet">
+                                <div class="box-header">
+                                    <span>Deutsch</span>
+                                    <input type="checkbox" class="subject-select" data-id="deutsch" checked>
+                                </div>
+                                <textarea id="deutsch"></textarea>
+                            </div>
+                            <div class="subject-box" data-accent="teal">
+                                <div class="box-header">
+                                    <span>D-KRYPT</span>
+                                    <input type="checkbox" class="subject-select" data-id="dkrypt" checked>
+                                </div>
+                                <textarea id="dkrypt"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="section-header">
+                        <h3 class="section-title">
+                            <svg class="icon icon-accent"><use href="#i-briefcase" /></svg>
+                            Betriebliche Tätigkeiten
+                        </h3>
+                        <button id="btnAI" class="btn-ai" onclick="refineWithAI()">
+                            <svg class="icon icon-sm"><use href="#i-sparkles" /></svg>
+                            KI Überarbeiten
+                        </button>
+                    </div>
+                    <textarea id="workActivities" placeholder="Stichpunkte hier notieren…"
+                        class="work-textarea"></textarea>
                 </div>
 
                 <div class="action-bar">
-                    <button id="btnUpload" class="btn-success" onclick="triggerUpload()">🚀 IHK Upload starten</button>
-                    <p id="detailLog" style="margin-top:10px; color:var(--text-muted);"></p>
+                    <p id="detailLog" class="detail-log"></p>
+                    <button id="btnUpload" class="btn-success" onclick="triggerUpload()">
+                        <svg class="icon"><use href="#i-upload" /></svg>
+                        IHK Upload starten
+                    </button>
                 </div>
             </div>
         </div>
