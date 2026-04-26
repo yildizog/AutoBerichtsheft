@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Berichtsheft</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -21,13 +21,10 @@
         <defs>
             <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></symbol>
             <symbol id="i-search"  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
-            <symbol id="i-trash"   viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></symbol>
-            <symbol id="i-x"       viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
-            <symbol id="i-logout"  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></symbol>
             <symbol id="i-spark"   viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></symbol>
-            <symbol id="i-arrow-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></symbol>
             <symbol id="i-back"    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></symbol>
             <symbol id="i-ext"     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+            <symbol id="i-check"   viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
         </defs>
     </svg>
 
@@ -36,7 +33,8 @@
         <!-- AUTH -->
         <div id="authSection" class="hidden">
             <div class="auth">
-                <h2>Login &amp; Setup</h2>
+                <h2>Anmeldung</h2>
+                <p class="auth-sub">Tokens werden lokal im Browser gespeichert.</p>
                 <input type="password" id="ghTokenInput" class="input" placeholder="GitHub Access Token">
                 <input type="password" id="geminiTokenInput" class="input" placeholder="Gemini API Key">
                 <button class="btn-primary" style="width:100%; margin-top:14px" onclick="saveTokenAndLogin()">Starten</button>
@@ -49,10 +47,8 @@
             <!-- TOPBAR -->
             <div class="topbar">
                 <div class="brand">
-                    <span class="brand-mark">v2 / archive</span>
                     <span class="brand-name">Berichtsheft</span>
                 </div>
-                <div></div>
                 <div class="topbar-status">
                     <div id="statusSubmitted" class="status-pill" title="Lade...">
                         <span class="dot"></span> Eintragung
@@ -60,9 +56,7 @@
                     <div id="statusApproved" class="status-pill" title="Lade...">
                         <span class="dot"></span> Genehmigung
                     </div>
-                    <button class="text-btn" onclick="logout()">
-                        Logout
-                    </button>
+                    <button class="text-btn" onclick="logout()">Abmelden</button>
                 </div>
             </div>
 
@@ -72,13 +66,12 @@
                 <!-- HEADLINE STATUS BANNER -->
                 <div id="headline" class="headline">
                     <div>
-                        <div class="headline-kicker">Status</div>
                         <div class="headline-text" id="headlineText">Lädt...</div>
+                        <div class="headline-sub" id="headlineSub"></div>
                     </div>
-                    <div></div>
                     <div class="headline-actions">
                         <button class="btn-ghost" id="jumpNextBtn" onclick="jumpToNextActionable()">
-                            Nächster offen ↓
+                            Zum nächsten offenen Punkt
                         </button>
                     </div>
                 </div>
@@ -86,7 +79,7 @@
                 <!-- LIVE AUTOMATION -->
                 <div class="section">
                     <div class="section-head">
-                        <div class="section-title">Live Automation</div>
+                        <h2 class="section-title">Live-Automation</h2>
                         <div class="section-tools">
                             <button class="icon-btn" title="Aktualisieren" onclick="fetchGithubRuns()">
                                 <svg><use href="#i-refresh"/></svg>
@@ -98,7 +91,7 @@
                         <div class="run-history">
                             <h4>Letzte Läufe</h4>
                             <div id="run-history-list">
-                                <div class="empty-line">— laden —</div>
+                                <div class="empty-line">Wird geladen…</div>
                             </div>
                         </div>
                     </div>
@@ -107,9 +100,9 @@
                 <!-- ARCHIVE -->
                 <div class="section">
                     <div class="section-head">
-                        <div class="section-title">
+                        <h2 class="section-title">
                             Archiv <span class="num" id="archiveCount">0</span>
-                        </div>
+                        </h2>
                         <div class="section-tools">
                             <button class="btn-ghost" id="dedupBtn" onclick="findAndShowDuplicates()">
                                 Duplikate prüfen
@@ -132,7 +125,7 @@
                             <div class="v" id="statPending">—</div>
                         </div>
                         <div class="stat warn" data-filter="empty">
-                            <div class="k">Leer / Unvollständig</div>
+                            <div class="k">Leer</div>
                             <div class="v" id="statEmpty">—</div>
                         </div>
                     </div>
@@ -141,13 +134,13 @@
                     <div class="tools">
                         <div class="search">
                             <svg><use href="#i-search"/></svg>
-                            <input type="text" id="searchInput" placeholder="Suche nach Datum, Inhalt..." oninput="renderReportList()">
+                            <input type="text" id="searchInput" placeholder="Berichte durchsuchen..." oninput="renderReportList()">
                         </div>
                         <div class="scrape-trigger">
                             <input type="date" id="scrapeDateInput">
-                            <button class="btn-primary" onclick="triggerScrape()">Holen</button>
+                            <button class="btn-primary" onclick="triggerScrape()">Woche holen</button>
                         </div>
-                        <button class="btn-ghost" onclick="toggleBulkMode()">Auswählen</button>
+                        <button class="btn-ghost" onclick="toggleBulkMode()" id="bulkToggleBtn">Auswählen</button>
                     </div>
 
                     <!-- BULK BAR -->
@@ -161,7 +154,9 @@
                         </div>
                     </div>
 
-                    <div id="reportList"></div>
+                    <div class="list-wrap">
+                        <div id="reportList"></div>
+                    </div>
                 </div>
             </div>
 
@@ -169,7 +164,7 @@
             <div id="view-detail" class="hidden">
                 <div class="detail-head">
                     <button class="back-btn" onclick="showList()">
-                        <svg style="width:11px;height:11px;vertical-align:-1px"><use href="#i-back"/></svg>
+                        <svg style="width:14px;height:14px"><use href="#i-back"/></svg>
                         Zurück
                     </button>
                     <h2 id="detailTitle">...</h2>
@@ -177,13 +172,13 @@
                 </div>
 
                 <div class="section-head" style="margin-bottom:18px">
-                    <div class="section-title">Berufsschule</div>
+                    <h2 class="section-title">Berufsschule</h2>
                     <div class="section-tools" style="gap:14px">
-                        <label style="display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); cursor:pointer">
-                            <input type="checkbox" id="selectAllSubjects" class="subject-check" checked onclick="toggleAllSubjects(this.checked)"> Alle
+                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:var(--fg-2); cursor:pointer">
+                            <input type="checkbox" id="selectAllSubjects" class="subject-check" checked onclick="toggleAllSubjects(this.checked)"> Alle auswählen
                         </label>
                         <button id="btnAISchool" class="btn-ghost" onclick="refineSchoolWithAI()">
-                            <svg style="width:11px;height:11px;vertical-align:-1px"><use href="#i-spark"/></svg>
+                            <svg style="width:14px;height:14px"><use href="#i-spark"/></svg>
                             KI Korrektur
                         </button>
                     </div>
@@ -197,15 +192,15 @@
                         </div>
                         <div class="subject" data-day="montag">
                             <div class="subject-head"><span class="subject-label">STDM</span><input type="checkbox" class="subject-check subject-select" data-id="stdm" checked></div>
-                            <textarea id="stdm"></textarea>
+                            <textarea id="stdm" placeholder="Inhalte des Faches..."></textarea>
                         </div>
                         <div class="subject" data-day="montag">
                             <div class="subject-head"><span class="subject-label">EVP</span><input type="checkbox" class="subject-check subject-select" data-id="evp" checked></div>
-                            <textarea id="evp"></textarea>
+                            <textarea id="evp" placeholder="Inhalte des Faches..."></textarea>
                         </div>
                         <div class="subject" data-day="montag">
                             <div class="subject-head"><span class="subject-label">Sport</span><input type="checkbox" class="subject-check subject-select" data-id="sport" checked></div>
-                            <textarea id="sport"></textarea>
+                            <textarea id="sport" placeholder="Inhalte des Faches..."></textarea>
                         </div>
                     </div>
 
@@ -216,41 +211,41 @@
                         </div>
                         <div class="subject" data-day="freitag">
                             <div class="subject-head"><span class="subject-label">WBL</span><input type="checkbox" class="subject-check subject-select" data-id="wbl" checked></div>
-                            <textarea id="wbl"></textarea>
+                            <textarea id="wbl" placeholder="Inhalte des Faches..."></textarea>
                         </div>
                         <div class="subject" data-day="freitag">
                             <div class="subject-head"><span class="subject-label">Englisch</span><input type="checkbox" class="subject-check subject-select" data-id="englisch" checked></div>
-                            <textarea id="englisch"></textarea>
+                            <textarea id="englisch" placeholder="Inhalte des Faches..."></textarea>
                         </div>
                         <div class="subject" data-day="freitag">
                             <div class="subject-head"><span class="subject-label">Deutsch</span><input type="checkbox" class="subject-check subject-select" data-id="deutsch" checked></div>
-                            <textarea id="deutsch"></textarea>
+                            <textarea id="deutsch" placeholder="Inhalte des Faches..."></textarea>
                         </div>
                         <div class="subject" data-day="freitag">
                             <div class="subject-head"><span class="subject-label">D-Krypt</span><input type="checkbox" class="subject-check subject-select" data-id="dkrypt" checked></div>
-                            <textarea id="dkrypt"></textarea>
+                            <textarea id="dkrypt" placeholder="Inhalte des Faches..."></textarea>
                         </div>
                     </div>
                 </div>
 
                 <div class="work-block">
                     <div class="work-block-head">
-                        <div class="section-title">Betriebliche Tätigkeiten</div>
+                        <h2 class="section-title">Betriebliche Tätigkeiten</h2>
                         <button id="btnAI" class="btn-ghost" onclick="refineWithAI()">
-                            <svg style="width:11px;height:11px;vertical-align:-1px"><use href="#i-spark"/></svg>
+                            <svg style="width:14px;height:14px"><use href="#i-spark"/></svg>
                             KI Überarbeiten
                         </button>
                     </div>
-                    <textarea id="workActivities" placeholder="Stichpunkte hier..."></textarea>
+                    <textarea id="workActivities" placeholder="Stichpunkte hier eintragen..."></textarea>
                 </div>
 
                 <div class="action-bar">
                     <button id="btnUpload" class="btn-go" onclick="triggerUpload()">
-                        IHK Upload starten
+                        IHK-Upload starten
                     </button>
                     <p id="detailLog" class="detail-log"></p>
                     <p class="detail-log" style="opacity:.7">
-                        Tipp: <kbd>Esc</kbd> zurück · <kbd>Ctrl</kbd> + <kbd>S</kbd> Upload
+                        <kbd>Esc</kbd> zurück · <kbd>Strg</kbd>+<kbd>S</kbd> Upload
                     </p>
                 </div>
             </div>
@@ -261,6 +256,7 @@
     <div id="dupModal" class="modal-backdrop">
         <div class="modal">
             <h3>Duplikate</h3>
+            <p class="modal-sub">Berichte, die sich ein Datum teilen.</p>
             <div id="dupModalBody"></div>
             <div class="actions">
                 <button class="btn-ghost" onclick="closeDupModal()">Schließen</button>

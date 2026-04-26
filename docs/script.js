@@ -88,17 +88,27 @@ async function fetchStatus() {
 function updateHeadline(missing, pending) {
     const banner = document.getElementById('headline');
     const text = document.getElementById('headlineText');
+    const sub = document.getElementById('headlineSub');
+    const jumpBtn = document.getElementById('jumpNextBtn');
     banner.classList.remove('ok', 'warn', 'err');
 
     if (missing > 0) {
         banner.classList.add('err');
-        text.innerHTML = `<strong>${missing}</strong> ${missing === 1 ? 'Bericht fehlt' : 'Berichte fehlen'} · <strong>${pending}</strong> wartet auf Genehmigung`;
+        text.innerHTML = `<strong>${missing}</strong> ${missing === 1 ? 'Bericht fehlt' : 'Berichte fehlen'}`;
+        sub.textContent = pending > 0
+            ? `${pending} ${pending === 1 ? 'Bericht wartet' : 'Berichte warten'} zusätzlich auf Genehmigung`
+            : 'Trage offene Berichte ein, damit dein Heft aktuell ist';
+        if (jumpBtn) jumpBtn.style.display = '';
     } else if (pending > 0) {
         banner.classList.add('warn');
-        text.innerHTML = `Alles eingetragen · <strong>${pending}</strong> ${pending === 1 ? 'wartet' : 'warten'} auf Genehmigung`;
+        text.innerHTML = `Alles eingetragen`;
+        sub.innerHTML = `<strong>${pending}</strong> ${pending === 1 ? 'Bericht wartet' : 'Berichte warten'} auf Genehmigung`;
+        if (jumpBtn) jumpBtn.style.display = '';
     } else {
         banner.classList.add('ok');
-        text.innerHTML = `Alle Berichte eingetragen und genehmigt`;
+        text.textContent = `Alles erledigt`;
+        sub.textContent = 'Berichte eingetragen und genehmigt';
+        if (jumpBtn) jumpBtn.style.display = 'none';
     }
 }
 
@@ -120,8 +130,8 @@ async function fetchGithubRuns() {
         const data = await res.json();
         const runs = data.workflow_runs || [];
         if (!runs.length) {
-            wrap.innerHTML = '<div class="run-current"><div class="empty-line">// keine läufe gefunden</div></div>';
-            histList.innerHTML = '<div class="empty-line">— leer —</div>';
+            wrap.innerHTML = '<div class="run-current"><div class="empty-line">Noch keine Läufe vorhanden</div></div>';
+            histList.innerHTML = '<div class="empty-line">Keine Einträge</div>';
             return;
         }
 
@@ -164,14 +174,13 @@ async function renderCurrentRun(run, token) {
     }
 
     const stateLabel = isRunning
-        ? (running ? `LÄUFT — ${running.name}` : 'GESTARTET')
-        : (run.conclusion === 'success' ? 'ERFOLGREICH' : run.conclusion === 'failure' ? 'FEHLGESCHLAGEN' : (run.conclusion || run.status).toUpperCase());
+        ? (running ? `Läuft — ${running.name}` : 'Gestartet')
+        : (run.conclusion === 'success' ? 'Erfolgreich' : run.conclusion === 'failure' ? 'Fehlgeschlagen' : (run.conclusion || run.status));
 
     let stepsHtml = '';
     if (steps.length) {
-        stepsHtml = steps.map((s, i) => {
+        stepsHtml = steps.map(s => {
             let cls = 'pending';
-            let m = String(i + 1).padStart(2, '0');
             if (s.status === 'completed') {
                 cls = s.conclusion === 'failure' ? 'failed' : 'done';
             } else if (s.status === 'in_progress') {
@@ -179,11 +188,13 @@ async function renderCurrentRun(run, token) {
             }
             const t = s.started_at && s.completed_at
                 ? formatDuration((new Date(s.completed_at) - new Date(s.started_at)) / 1000)
-                : (s.status === 'in_progress' ? 'läuft' : '');
-            return `<div class="step ${cls}"><div class="marker">${m}</div><div class="name">${escape(s.name)}</div><div class="t">${t}</div></div>`;
+                : (s.status === 'in_progress' ? 'läuft…' : '');
+            return `<div class="step ${cls}"><span class="marker"></span><div class="name">${escape(s.name)}</div><div class="t">${t}</div></div>`;
         }).join('');
     } else if (!isRunning) {
-        stepsHtml = `<div class="step ${run.conclusion === 'failure' ? 'failed' : 'done'}"><div class="marker">✓</div><div class="name">Lauf beendet — ${escape(run.conclusion || 'unknown')}</div><div class="t">${etaText}</div></div>`;
+        const cls = run.conclusion === 'failure' ? 'failed' : 'done';
+        const label = run.conclusion === 'success' ? 'Lauf erfolgreich beendet' : run.conclusion === 'failure' ? 'Lauf fehlgeschlagen' : `Lauf beendet — ${escape(run.conclusion || 'unbekannt')}`;
+        stepsHtml = `<div class="step ${cls}"><span class="marker"></span><div class="name">${label}</div><div class="t">${etaText}</div></div>`;
     }
 
     wrap.innerHTML = `
@@ -203,7 +214,7 @@ async function renderCurrentRun(run, token) {
                 <div class="run-stat"><div class="k">Laufzeit</div><div class="v">${elapsed}</div></div>
                 <div class="run-stat"><div class="k">${isRunning ? 'ETA' : 'Dauer'}</div><div class="v">${etaText}</div></div>
             </div>
-            <div class="steps">${stepsHtml || '<div class="step pending"><div class="marker">··</div><div class="name">Keine Schritte</div><div class="t"></div></div>'}</div>
+            <div class="steps">${stepsHtml || '<div class="step pending"><span class="marker"></span><div class="name">Keine Schritte verfügbar</div><div class="t"></div></div>'}</div>
         </div>
     `;
 }
@@ -223,7 +234,7 @@ async function fetchJobSteps(runId, token) {
 function renderHistory(runs) {
     const list = document.getElementById('run-history-list');
     if (!runs.length) {
-        list.innerHTML = '<div class="empty-line">— leer —</div>';
+        list.innerHTML = '<div class="empty-line">Keine Einträge</div>';
         return;
     }
     list.innerHTML = runs.map(r => {
@@ -333,7 +344,7 @@ function renderReportList() {
         if (missingWeeks.length) {
             const head = document.createElement('div');
             head.className = 'month-head';
-            head.innerHTML = `<span>// Fehlende Berichte</span><span class="count">${missingWeeks.length}</span>`;
+            head.innerHTML = `<span>Fehlende Berichte</span><span class="count">${missingWeeks.length}</span>`;
             container.appendChild(head);
 
             missingWeeks.forEach(date => {
@@ -360,7 +371,7 @@ function renderReportList() {
 
     if (currentFilter === 'missing') {
         if (!missingWeeks.length) {
-            container.innerHTML = '<div class="empty-line">// alles eingetragen — nichts fehlt</div>';
+            container.innerHTML = '<div class="empty-line">Alles eingetragen — nichts fehlt</div>';
         }
         return;
     }
@@ -368,7 +379,7 @@ function renderReportList() {
     if (!filtered.length) {
         const div = document.createElement('div');
         div.className = 'empty-line';
-        div.innerHTML = q ? `// keine treffer für "${escape(q)}"` : '// keine berichte';
+        div.textContent = q ? `Keine Treffer für „${q}"` : 'Keine Berichte';
         container.appendChild(div);
         return;
     }
@@ -402,9 +413,9 @@ function buildRow(r, meta) {
     if (bulkSelected.has(r.id)) row.classList.add('selected');
 
     const flags = [];
-    if (meta.flags.duplicate) flags.push('<span class="flag duplicate">duplikat</span>');
-    if (meta.flags.empty) flags.push('<span class="flag empty">leer</span>');
-    else if (meta.flags.partial) flags.push('<span class="flag partial">unvollständig</span>');
+    if (meta.flags.duplicate) flags.push('<span class="flag duplicate">Duplikat</span>');
+    if (meta.flags.empty) flags.push('<span class="flag empty">Leer</span>');
+    else if (meta.flags.partial) flags.push('<span class="flag partial">Unvollständig</span>');
 
     let statusTag;
     if (meta.flags.pending) statusTag = '<span class="status-tag pending">Genehmigung</span>';
@@ -464,6 +475,8 @@ function toggleBulkMode() {
     bulkMode = !bulkMode;
     if (!bulkMode) bulkSelected.clear();
     document.getElementById('bulkbar').classList.toggle('show', bulkMode);
+    const btn = document.getElementById('bulkToggleBtn');
+    if (btn) btn.textContent = bulkMode ? 'Fertig' : 'Auswählen';
     updateBulkBar();
     renderReportList();
 }
@@ -503,14 +516,14 @@ function findAndShowDuplicates() {
     const groups = findDuplicates();
     const body = document.getElementById('dupModalBody');
     if (!groups.length) {
-        body.innerHTML = '<p>Keine Duplikate gefunden.</p>';
+        body.innerHTML = '<p style="color:var(--fg-2)">Keine Duplikate gefunden.</p>';
     } else {
-        body.innerHTML = '<p>Folgende Berichte teilen sich ein Datum:</p>' + groups.map(g => `
-            <div style="border:1px solid var(--line); padding:12px; margin-bottom:10px;">
-                <div class="mono" style="font-size:11px; color:var(--accent); margin-bottom:8px; letter-spacing:.1em">${escape(g.key)}</div>
+        body.innerHTML = groups.map(g => `
+            <div style="border:1px solid var(--line); padding:14px; margin-bottom:10px; border-radius:var(--r-md); background:var(--bg-2);">
+                <div style="font-size:14px; font-weight:600; color:var(--fg); margin-bottom:10px;">${escape(g.key)}</div>
                 ${g.items.map(it => `
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-top:1px solid var(--line)">
-                        <span class="mono" style="font-size:11px; color:var(--muted)">id:${escape(it.id.slice(0, 18))}… · ${escape(it.createdAt || '—')}</span>
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; padding:8px 0; border-top:1px solid var(--line)">
+                        <span style="font-size:12px; color:var(--muted)">${escape(it.createdAt || 'Unbekanntes Datum')}</span>
                         <button class="btn-ghost danger" onclick="deleteOne('${it.id}')">Löschen</button>
                     </div>
                 `).join('')}
