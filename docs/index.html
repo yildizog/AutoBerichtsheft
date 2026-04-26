@@ -5,8 +5,8 @@
     <link rel="icon" type="image/x-icon" href="./favicon.ico">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AutoBerichtsheft Pro</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>Berichtsheft</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -16,134 +16,254 @@
 
     <div id="toast-container"></div>
 
-    <div class="container">
+    <!-- ICONS -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <defs>
+            <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></symbol>
+            <symbol id="i-search"  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+            <symbol id="i-trash"   viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></symbol>
+            <symbol id="i-x"       viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+            <symbol id="i-logout"  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></symbol>
+            <symbol id="i-spark"   viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></symbol>
+            <symbol id="i-arrow-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></symbol>
+            <symbol id="i-back"    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></symbol>
+            <symbol id="i-ext"     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+        </defs>
+    </svg>
+
+    <div class="shell">
+
+        <!-- AUTH -->
         <div id="authSection" class="hidden">
-            <div class="auth-card">
-                <h2>🔐 Login & Setup</h2>
-                <input type="password" id="ghTokenInput" class="token-input" placeholder="GitHub Access Token">
-                <input type="password" id="geminiTokenInput" class="token-input" placeholder="Gemini API Key">
-                <button class="btn-hero" style="width:100%" onclick="saveTokenAndLogin()">Starten</button>
+            <div class="auth">
+                <h2>Login &amp; Setup</h2>
+                <input type="password" id="ghTokenInput" class="input" placeholder="GitHub Access Token">
+                <input type="password" id="geminiTokenInput" class="input" placeholder="Gemini API Key">
+                <button class="btn-primary" style="width:100%; margin-top:14px" onclick="saveTokenAndLogin()">Starten</button>
             </div>
         </div>
 
+        <!-- APP -->
         <div id="appContent" class="hidden">
-            <header>
-                <h1>📚 Berichtsheft Manager</h1>
-                <div style="display:flex; align-items:center;">
-                    <div class="status-group">
-                        <div id="statusSubmitted" class="status-pill" title="Lade Status...">
-                            <span class="indicator"></span> Eintragung
-                        </div>
-                        <div id="statusApproved" class="status-pill" title="Lade Status...">
-                            <span class="indicator"></span> Genehmigung
-                        </div>
-                    </div>
-                    <button class="logout-btn" onclick="logout()">Logout</button>
-                </div>
-            </header>
 
-            <div id="view-list">
-                <div class="status-dashboard">
-                    <div class="section-header">
-                        <h3 class="section-title">⚡ Live Automation Status</h3>
-                        <button class="refresh-btn" onclick="fetchGithubRuns()">🔄</button>
-                    </div>
-                    <div id="gh-run-status" class="run-container">
-                        <p style="text-align:center; color: var(--text-muted);">Lade GitHub Status...</p>
-                    </div>
+            <!-- TOPBAR -->
+            <div class="topbar">
+                <div class="brand">
+                    <span class="brand-mark">v2 / archive</span>
+                    <span class="brand-name">Berichtsheft</span>
                 </div>
-
-                <div class="view-header">
-                    <div>
-                        <h2>Berichts-Archiv</h2>
-                        <p class="subtitle">Wähle eine Woche zum Bearbeiten</p>
+                <div></div>
+                <div class="topbar-status">
+                    <div id="statusSubmitted" class="status-pill" title="Lade...">
+                        <span class="dot"></span> Eintragung
                     </div>
-                    <div style="display:flex; gap:10px;">
-                        <input type="date" id="scrapeDateInput" class="badge"
-                            style="background:var(--bg-input); color:white; border:1px solid var(--border); padding:10px;">
-                        <button class="btn-hero" onclick="triggerScrape()">✨ Neue Woche holen</button>
+                    <div id="statusApproved" class="status-pill" title="Lade...">
+                        <span class="dot"></span> Genehmigung
                     </div>
+                    <button class="text-btn" onclick="logout()">
+                        Logout
+                    </button>
                 </div>
-                <ul id="reportList" class="process-list"></ul>
             </div>
 
+            <!-- LIST VIEW -->
+            <div id="view-list">
+
+                <!-- HEADLINE STATUS BANNER -->
+                <div id="headline" class="headline">
+                    <div>
+                        <div class="headline-kicker">Status</div>
+                        <div class="headline-text" id="headlineText">Lädt...</div>
+                    </div>
+                    <div></div>
+                    <div class="headline-actions">
+                        <button class="btn-ghost" id="jumpNextBtn" onclick="jumpToNextActionable()">
+                            Nächster offen ↓
+                        </button>
+                    </div>
+                </div>
+
+                <!-- LIVE AUTOMATION -->
+                <div class="section">
+                    <div class="section-head">
+                        <div class="section-title">Live Automation</div>
+                        <div class="section-tools">
+                            <button class="icon-btn" title="Aktualisieren" onclick="fetchGithubRuns()">
+                                <svg><use href="#i-refresh"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="automation">
+                        <div id="run-current-wrap"></div>
+                        <div class="run-history">
+                            <h4>Letzte Läufe</h4>
+                            <div id="run-history-list">
+                                <div class="empty-line">— laden —</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ARCHIVE -->
+                <div class="section">
+                    <div class="section-head">
+                        <div class="section-title">
+                            Archiv <span class="num" id="archiveCount">0</span>
+                        </div>
+                        <div class="section-tools">
+                            <button class="btn-ghost" id="dedupBtn" onclick="findAndShowDuplicates()">
+                                Duplikate prüfen
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- STATS STRIP -->
+                    <div class="stats" id="statsStrip">
+                        <div class="stat active" data-filter="all">
+                            <div class="k">Gesamt</div>
+                            <div class="v" id="statTotal">—</div>
+                        </div>
+                        <div class="stat err" data-filter="missing">
+                            <div class="k">Fehlend</div>
+                            <div class="v" id="statMissing">—</div>
+                        </div>
+                        <div class="stat pending" data-filter="pending">
+                            <div class="k">Wartend</div>
+                            <div class="v" id="statPending">—</div>
+                        </div>
+                        <div class="stat warn" data-filter="empty">
+                            <div class="k">Leer / Unvollständig</div>
+                            <div class="v" id="statEmpty">—</div>
+                        </div>
+                    </div>
+
+                    <!-- TOOLS -->
+                    <div class="tools">
+                        <div class="search">
+                            <svg><use href="#i-search"/></svg>
+                            <input type="text" id="searchInput" placeholder="Suche nach Datum, Inhalt..." oninput="renderReportList()">
+                        </div>
+                        <div class="scrape-trigger">
+                            <input type="date" id="scrapeDateInput">
+                            <button class="btn-primary" onclick="triggerScrape()">Holen</button>
+                        </div>
+                        <button class="btn-ghost" onclick="toggleBulkMode()">Auswählen</button>
+                    </div>
+
+                    <!-- BULK BAR -->
+                    <div class="bulkbar" id="bulkbar">
+                        <div class="label">
+                            <strong id="bulkCount">0</strong> ausgewählt
+                        </div>
+                        <div class="actions">
+                            <button class="btn-ghost" onclick="clearBulkSelection()">Abwählen</button>
+                            <button class="btn-ghost danger" onclick="bulkDelete()">Löschen</button>
+                        </div>
+                    </div>
+
+                    <div id="reportList"></div>
+                </div>
+            </div>
+
+            <!-- DETAIL VIEW -->
             <div id="view-detail" class="hidden">
-                <div class="detail-header">
-                    <button class="back-btn" onclick="showList()">← Zurück</button>
+                <div class="detail-head">
+                    <button class="back-btn" onclick="showList()">
+                        <svg style="width:11px;height:11px;vertical-align:-1px"><use href="#i-back"/></svg>
+                        Zurück
+                    </button>
                     <h2 id="detailTitle">...</h2>
-                    <span id="detailStatus" class="badge">...</span>
+                    <span id="detailStatus" class="status-tag">...</span>
                 </div>
 
-                <div class="section-header">
-                    <div style="display:flex; align-items:center; gap:16px;">
-                        <h3 class="section-title">🏫 Berufsschule</h3>
-                        <label class="select-all-label"
-                            style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                            <input type="checkbox" id="selectAllSubjects" checked
-                                onclick="toggleAllSubjects(this.checked)"> Alle
+                <div class="section-head" style="margin-bottom:18px">
+                    <div class="section-title">Berufsschule</div>
+                    <div class="section-tools" style="gap:14px">
+                        <label style="display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); cursor:pointer">
+                            <input type="checkbox" id="selectAllSubjects" class="subject-check" checked onclick="toggleAllSubjects(this.checked)"> Alle
                         </label>
-                    </div>
-                    <button id="btnAISchool" class="btn-ai btn-secondary" onclick="refineSchoolWithAI()">🪄 KI
-                        Korrektur</button>
-                </div>
-
-                <div class="days-wrapper">
-                    <div class="day-column">
-                        <div class="day-header">
-                            <h4 class="day-title">Montag</h4>
-                            <button class="btn-sick" onclick="setSick('montag')">🤒 Krank</button>
-                        </div>
-                        <div class="subject-box">
-                            <div class="box-header"><span>STDM</span><input type="checkbox" class="subject-select"
-                                    data-id="stdm" checked></div><textarea id="stdm"></textarea>
-                        </div>
-                        <div class="subject-box">
-                            <div class="box-header"><span>EVP</span><input type="checkbox" class="subject-select"
-                                    data-id="evp" checked></div><textarea id="evp"></textarea>
-                        </div>
-                        <div class="subject-box">
-                            <div class="box-header"><span>Sport</span><input type="checkbox" class="subject-select"
-                                    data-id="sport" checked></div><textarea id="sport"></textarea>
-                        </div>
-                    </div>
-
-                    <div class="day-column">
-                        <div class="day-header">
-                            <h4 class="day-title">Freitag</h4>
-                            <button class="btn-sick" onclick="setSick('freitag')">🤒 Krank</button>
-                        </div>
-                        <div class="subject-box">
-                            <div class="box-header"><span>WBL</span><input type="checkbox" class="subject-select"
-                                    data-id="wbl" checked></div><textarea id="wbl"></textarea>
-                        </div>
-                        <div class="subject-box">
-                            <div class="box-header"><span>Englisch</span><input type="checkbox" class="subject-select"
-                                    data-id="englisch" checked></div><textarea id="englisch"></textarea>
-                        </div>
-                        <div class="subject-box">
-                            <div class="box-header"><span>Deutsch</span><input type="checkbox" class="subject-select"
-                                    data-id="deutsch" checked></div><textarea id="deutsch"></textarea>
-                        </div>
-                        <div class="subject-box">
-                            <div class="box-header"><span>D-KRYPT</span><input type="checkbox" class="subject-select"
-                                    data-id="dkrypt" checked></div><textarea id="dkrypt"></textarea>
-                        </div>
-
+                        <button id="btnAISchool" class="btn-ghost" onclick="refineSchoolWithAI()">
+                            <svg style="width:11px;height:11px;vertical-align:-1px"><use href="#i-spark"/></svg>
+                            KI Korrektur
+                        </button>
                     </div>
                 </div>
 
-                <div class="full-width-box">
-                    <div class="section-header">
-                        <h3 class="section-title">🛠️ Betriebliche Tätigkeiten</h3>
-                        <button id="btnAI" class="btn-ai" onclick="refineWithAI()">🪄 KI Überarbeiten</button>
+                <div class="day-grid">
+                    <div class="day">
+                        <div class="day-head">
+                            <span class="day-name">Montag</span>
+                            <button class="btn-sick" onclick="setSick('montag')">Krank melden</button>
+                        </div>
+                        <div class="subject" data-day="montag">
+                            <div class="subject-head"><span class="subject-label">STDM</span><input type="checkbox" class="subject-check subject-select" data-id="stdm" checked></div>
+                            <textarea id="stdm"></textarea>
+                        </div>
+                        <div class="subject" data-day="montag">
+                            <div class="subject-head"><span class="subject-label">EVP</span><input type="checkbox" class="subject-check subject-select" data-id="evp" checked></div>
+                            <textarea id="evp"></textarea>
+                        </div>
+                        <div class="subject" data-day="montag">
+                            <div class="subject-head"><span class="subject-label">Sport</span><input type="checkbox" class="subject-check subject-select" data-id="sport" checked></div>
+                            <textarea id="sport"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="day">
+                        <div class="day-head">
+                            <span class="day-name">Freitag</span>
+                            <button class="btn-sick" onclick="setSick('freitag')">Krank melden</button>
+                        </div>
+                        <div class="subject" data-day="freitag">
+                            <div class="subject-head"><span class="subject-label">WBL</span><input type="checkbox" class="subject-check subject-select" data-id="wbl" checked></div>
+                            <textarea id="wbl"></textarea>
+                        </div>
+                        <div class="subject" data-day="freitag">
+                            <div class="subject-head"><span class="subject-label">Englisch</span><input type="checkbox" class="subject-check subject-select" data-id="englisch" checked></div>
+                            <textarea id="englisch"></textarea>
+                        </div>
+                        <div class="subject" data-day="freitag">
+                            <div class="subject-head"><span class="subject-label">Deutsch</span><input type="checkbox" class="subject-check subject-select" data-id="deutsch" checked></div>
+                            <textarea id="deutsch"></textarea>
+                        </div>
+                        <div class="subject" data-day="freitag">
+                            <div class="subject-head"><span class="subject-label">D-Krypt</span><input type="checkbox" class="subject-check subject-select" data-id="dkrypt" checked></div>
+                            <textarea id="dkrypt"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="work-block">
+                    <div class="work-block-head">
+                        <div class="section-title">Betriebliche Tätigkeiten</div>
+                        <button id="btnAI" class="btn-ghost" onclick="refineWithAI()">
+                            <svg style="width:11px;height:11px;vertical-align:-1px"><use href="#i-spark"/></svg>
+                            KI Überarbeiten
+                        </button>
                     </div>
                     <textarea id="workActivities" placeholder="Stichpunkte hier..."></textarea>
                 </div>
 
                 <div class="action-bar">
-                    <button id="btnUpload" class="btn-success" onclick="triggerUpload()">🚀 IHK Upload starten</button>
-                    <p id="detailLog" style="margin-top:10px; color:var(--text-muted);"></p>
+                    <button id="btnUpload" class="btn-go" onclick="triggerUpload()">
+                        IHK Upload starten
+                    </button>
+                    <p id="detailLog" class="detail-log"></p>
+                    <p class="detail-log" style="opacity:.7">
+                        Tipp: <kbd>Esc</kbd> zurück · <kbd>Ctrl</kbd> + <kbd>S</kbd> Upload
+                    </p>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DUPLICATE MODAL -->
+    <div id="dupModal" class="modal-backdrop">
+        <div class="modal">
+            <h3>Duplikate</h3>
+            <div id="dupModalBody"></div>
+            <div class="actions">
+                <button class="btn-ghost" onclick="closeDupModal()">Schließen</button>
             </div>
         </div>
     </div>
