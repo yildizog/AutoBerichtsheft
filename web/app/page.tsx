@@ -69,7 +69,10 @@ export default function DashboardPage() {
       setLoading(false);
     })();
     const runInterval = setInterval(loadRuns, 10000);
-    const statusInterval = setInterval(loadStatus, 30000);
+    const statusInterval = setInterval(() => {
+      loadStatus();
+      loadReports();
+    }, 30000);
     return () => {
       clearInterval(runInterval);
       clearInterval(statusInterval);

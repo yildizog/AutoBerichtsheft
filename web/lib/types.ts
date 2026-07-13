@@ -17,6 +17,7 @@ export interface ReportDoc {
   content?: ReportContent;
   dateLabel?: string;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Report extends ReportDoc {

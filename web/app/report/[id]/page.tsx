@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/client/api';
 import { Report, SchoolField, SickDays } from '@/lib/types';
@@ -42,6 +42,10 @@ export default function ReportDetailPage() {
   const [aiWorkLoading, setAiWorkLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
 
+  const [saveState, setSaveState] = useState<'idle' | 'dirty' | 'saving' | 'saved' | 'error'>('idle');
+  const loadedRef = useRef(false);
+  const skipNextSaveRef = useRef(false);
+
   useEffect(() => {
     (async () => {
       try {
@@ -54,6 +58,8 @@ export default function ReportDetailPage() {
         });
         setWorkActivities(c.workActivities || '');
         if (c.sickDays) setSickDays(c.sickDays);
+        skipNextSaveRef.current = true;
+        loadedRef.current = true;
       } catch (err) {
         toast((err as Error).message, 'error');
       } finally {
@@ -62,6 +68,36 @@ export default function ReportDetailPage() {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  async function saveContent(): Promise<boolean> {
+    setSaveState('saving');
+    try {
+      await apiFetch(`/api/reports/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ content: { ...fields, workActivities, sickDays } }),
+      });
+      setSaveState('saved');
+      return true;
+    } catch {
+      setSaveState('error');
+      return false;
+    }
+  }
+
+  // Autosave: Änderungen 1,2s nach der letzten Eingabe automatisch in Firebase sichern.
+  useEffect(() => {
+    if (!loadedRef.current) return;
+    if (skipNextSaveRef.current) {
+      skipNextSaveRef.current = false;
+      return;
+    }
+    setSaveState('dirty');
+    const timer = setTimeout(() => {
+      void saveContent();
+    }, 1200);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fields, workActivities, sickDays]);
 
   function toggleSick(day: keyof SickDays) {
     setSickDays((s) => ({ ...s, [day]: !s[day] }));
@@ -120,6 +156,9 @@ export default function ReportDetailPage() {
   async function upload() {
     setUploading(true);
     try {
+      // Vor dem Upload den Stand in Firebase sichern, damit DB und IHK synchron sind.
+      const saved = await saveContent();
+      if (!saved) throw new Error('Speichern in Firebase fehlgeschlagen – Upload abgebrochen.');
       await apiFetch('/api/actions/upload', {
         method: 'POST',
         body: JSON.stringify({ reportId: id, content: { ...fields, workActivities, sickDays } }),
@@ -148,7 +187,20 @@ export default function ReportDetailPage() {
             <IconChevron className="rotate-180" size={18} />
             Übersicht
           </button>
-          <h1 className="text-[24px] font-bold tracking-tight">{report?.dateLabel || `Woche ${id}`}</h1>
+          <div className="flex items-baseline justify-between gap-3">
+            <h1 className="text-[24px] font-bold tracking-tight">{report?.dateLabel || `Woche ${id}`}</h1>
+            <span
+              className={`whitespace-nowrap text-[12px] font-medium ${
+                saveState === 'error' ? 'text-ios-red' : 'text-label-secondary'
+              }`}
+              aria-live="polite"
+            >
+              {saveState === 'dirty' && 'Ungespeicherte Änderungen…'}
+              {saveState === 'saving' && 'Speichert…'}
+              {saveState === 'saved' && 'Gespeichert ✓'}
+              {saveState === 'error' && 'Speichern fehlgeschlagen'}
+            </span>
+          </div>
         </div>
       </header>
 
