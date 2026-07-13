@@ -27,6 +27,13 @@ Die Anwendung bietet eine vollständige End-to-End Automatisierung:
 - **Firebase Sync**: Sendet Live-Updates über den Status (Running, Success, Failed) an eine Firebase Realtime Database (für optionale Frontends/Apps).
 - **Fehler-Erkennung**: Macht Screenshots bei Fehlern (`error_debug.png`) zur einfachen Analyse.
 
+### 4. Web-Dashboard (`/web`)
+- **Natives iOS-Design**: Bedienbares Dashboard im Look von iOS (große Titel, Tab-Bar, Grouped Lists), installierbar über "Zum Home-Bildschirm hinzufügen".
+- **Gedacht für Vercel-Hosting**: Alle Zugangsdaten (GitHub, Gemini, Firebase, E-Mail) liegen ausschließlich serverseitig als Environment Variables – nichts landet im Browser.
+- **Passwortgeschützt**, damit die App öffentlich gehostet werden kann.
+- **Wochen-Digest-Mail**: optionale wöchentliche Zusammenfassung, ergänzt den bestehenden Alarm bei fehlenden Berichten.
+- Details & Deployment-Anleitung: [`web/README.md`](web/README.md). Das alte GitHub-Pages-Frontend unter `docs/` ist abgelöst.
+
 ---
 
 ## 🛠️ Einrichtung & Installation
@@ -103,7 +110,10 @@ Das Projekt ist in zwei Teile gegliedert (`scrape.spec.ts` und `upload.spec.ts`)
 
 - `tests/scrape.spec.ts`: Logik für WebUntis Login und Datenextraktion.
 - `tests/upload.spec.ts`: Logik für IHK Login und Eintragung.
+- `tests/check_missing_reports.spec.ts`: Prüft auf fehlende Berichte und verschickt bei Bedarf eine Alarm-Mail.
 - `playwright.config.ts`: Konfiguration für Browser, Timeouts und Retries.
+- `web/`: Next.js Web-Dashboard im iOS-Design (Deployment via Vercel), siehe [`web/README.md`](web/README.md).
+- `docs/`: Alte GitHub-Pages-Seite, mittlerweile nur noch ein Hinweis-Redirect zum neuen Dashboard.
 
 ---
 

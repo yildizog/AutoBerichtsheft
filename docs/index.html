@@ -5,151 +5,25 @@
     <link rel="icon" type="image/x-icon" href="./favicon.ico">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AutoBerichtsheft Pro</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <title>Berichtsheft – umgezogen</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 
 <body>
-
-    <div id="toast-container"></div>
-
-    <div class="container">
-        <div id="authSection" class="hidden">
-            <div class="auth-card">
-                <h2>🔐 Login & Setup</h2>
-                <input type="password" id="ghTokenInput" class="token-input" placeholder="GitHub Access Token">
-                <input type="password" id="geminiTokenInput" class="token-input" placeholder="Gemini API Key">
-                <button class="btn-hero" style="width:100%" onclick="saveTokenAndLogin()">Starten</button>
-            </div>
-        </div>
-
-        <div id="appContent" class="hidden">
-            <header>
-                <h1>📚 Berichtsheft Manager</h1>
-                <div style="display:flex; align-items:center;">
-                    <div class="status-group">
-                        <div id="statusSubmitted" class="status-pill" title="Lade Status...">
-                            <span class="indicator"></span> Eintragung
-                        </div>
-                        <div id="statusApproved" class="status-pill" title="Lade Status...">
-                            <span class="indicator"></span> Genehmigung
-                        </div>
-                    </div>
-                    <button class="logout-btn" onclick="logout()">Logout</button>
-                </div>
-            </header>
-
-            <div id="view-list">
-                <div class="status-dashboard">
-                    <div class="section-header">
-                        <h3 class="section-title">⚡ Live Automation Status</h3>
-                        <button class="refresh-btn" onclick="fetchGithubRuns()">🔄</button>
-                    </div>
-                    <div id="gh-run-status" class="run-container">
-                        <p style="text-align:center; color: var(--text-muted);">Lade GitHub Status...</p>
-                    </div>
-                </div>
-
-                <div class="view-header">
-                    <div>
-                        <h2>Berichts-Archiv</h2>
-                        <p class="subtitle">Wähle eine Woche zum Bearbeiten</p>
-                    </div>
-                    <div style="display:flex; gap:10px;">
-                        <input type="date" id="scrapeDateInput" class="badge"
-                            style="background:var(--bg-input); color:white; border:1px solid var(--border); padding:10px;">
-                        <button class="btn-hero" onclick="triggerScrape()">✨ Neue Woche holen</button>
-                    </div>
-                </div>
-                <ul id="reportList" class="process-list"></ul>
-            </div>
-
-            <div id="view-detail" class="hidden">
-                <div class="detail-header">
-                    <button class="back-btn" onclick="showList()">← Zurück</button>
-                    <h2 id="detailTitle">...</h2>
-                    <span id="detailStatus" class="badge">...</span>
-                </div>
-
-                <div class="section-header">
-                    <div style="display:flex; align-items:center; gap:16px;">
-                        <h3 class="section-title">🏫 Berufsschule</h3>
-                        <label class="select-all-label"
-                            style="display:flex; align-items:center; gap:8px; cursor:pointer;">
-                            <input type="checkbox" id="selectAllSubjects" checked
-                                onclick="toggleAllSubjects(this.checked)"> Alle
-                        </label>
-                    </div>
-                    <button id="btnAISchool" class="btn-ai btn-secondary" onclick="refineSchoolWithAI()">🪄 KI
-                        Korrektur</button>
-                </div>
-
-                <div class="days-wrapper">
-                    <div class="day-column">
-                        <div class="day-header">
-                            <h4 class="day-title">Montag</h4>
-                            <button class="btn-sick" onclick="setSick('montag')">🤒 Krank</button>
-                        </div>
-                        <div class="subject-box">
-                            <div class="box-header"><span>STDM</span><input type="checkbox" class="subject-select"
-                                    data-id="stdm" checked></div><textarea id="stdm"></textarea>
-                        </div>
-                        <div class="subject-box">
-                            <div class="box-header"><span>EVP</span><input type="checkbox" class="subject-select"
-                                    data-id="evp" checked></div><textarea id="evp"></textarea>
-                        </div>
-                        <div class="subject-box">
-                            <div class="box-header"><span>Sport</span><input type="checkbox" class="subject-select"
-                                    data-id="sport" checked></div><textarea id="sport"></textarea>
-                        </div>
-                    </div>
-
-                    <div class="day-column">
-                        <div class="day-header">
-                            <h4 class="day-title">Freitag</h4>
-                            <button class="btn-sick" onclick="setSick('freitag')">🤒 Krank</button>
-                        </div>
-                        <div class="subject-box">
-                            <div class="box-header"><span>WBL</span><input type="checkbox" class="subject-select"
-                                    data-id="wbl" checked></div><textarea id="wbl"></textarea>
-                        </div>
-                        <div class="subject-box">
-                            <div class="box-header"><span>Englisch</span><input type="checkbox" class="subject-select"
-                                    data-id="englisch" checked></div><textarea id="englisch"></textarea>
-                        </div>
-                        <div class="subject-box">
-                            <div class="box-header"><span>Deutsch</span><input type="checkbox" class="subject-select"
-                                    data-id="deutsch" checked></div><textarea id="deutsch"></textarea>
-                        </div>
-                        <div class="subject-box">
-                            <div class="box-header"><span>D-KRYPT</span><input type="checkbox" class="subject-select"
-                                    data-id="dkrypt" checked></div><textarea id="dkrypt"></textarea>
-                        </div>
-
-                    </div>
-                </div>
-
-                <div class="full-width-box">
-                    <div class="section-header">
-                        <h3 class="section-title">🛠️ Betriebliche Tätigkeiten</h3>
-                        <button id="btnAI" class="btn-ai" onclick="refineWithAI()">🪄 KI Überarbeiten</button>
-                    </div>
-                    <textarea id="workActivities" placeholder="Stichpunkte hier..."></textarea>
-                </div>
-
-                <div class="action-bar">
-                    <button id="btnUpload" class="btn-success" onclick="triggerUpload()">🚀 IHK Upload starten</button>
-                    <p id="detailLog" style="margin-top:10px; color:var(--text-muted);"></p>
-                </div>
-            </div>
-        </div>
+    <div class="notice-card">
+        <h1>Dieses Dashboard ist umgezogen 👋</h1>
+        <p>
+            Aus Sicherheitsgründen (GitHub- &amp; Gemini-Zugangsdaten lagen hier ungeschützt im Browser)
+            läuft die Berichtsheft-App jetzt als eigenständige Web-App unter <code>/web</code> im Repository,
+            gedacht für ein Hosting auf Vercel. Alle Zugangsdaten liegen dort ausschließlich serverseitig als
+            Environment Variables.
+        </p>
+        <p>
+            Trage dir die Adresse deines Vercel-Deployments hier ein und öffne sie – am besten direkt über
+            „Zum Home-Bildschirm hinzufügen" für ein natives iOS-Gefühl.
+        </p>
+        <p class="hint">Setup-Anleitung: siehe <code>web/README.md</code> im Repository.</p>
     </div>
-
-    <script src="config.js"></script>
-    <script src="script.js"></script>
 </body>
 
 </html>
