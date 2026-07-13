@@ -5,20 +5,22 @@ import { useParams, useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/client/api';
 import { Report, SchoolField, SickDays } from '@/lib/types';
 import { Switch } from '@/components/switch';
-import { IconBed, IconChevron, IconSparkles, IconUpload } from '@/components/icons';
+import { IconBed, IconCheck, IconChevron, IconSparkles, IconUpload, IconX } from '@/components/icons';
 import { useToast } from '@/components/providers';
 
-const MONTAG_FIELDS: { id: SchoolField; label: string; placeholder: string }[] = [
-  { id: 'stdm', label: 'STDM', placeholder: 'Softwaretechnologie und Datenmanagement…' },
-  { id: 'evp', label: 'EVP', placeholder: 'Entwicklung Vernetzter Prozesse…' },
-  { id: 'sport', label: 'Sport', placeholder: 'Sportunterricht…' },
+type SubjectField = { id: SchoolField; label: string; placeholder: string; chip: string };
+
+const MONTAG_FIELDS: SubjectField[] = [
+  { id: 'stdm', label: 'STDM', placeholder: 'Softwaretechnologie und Datenmanagement…', chip: 'bg-ios-blue/15 text-ios-blue' },
+  { id: 'evp', label: 'EVP', placeholder: 'Entwicklung Vernetzter Prozesse…', chip: 'bg-ios-indigo/15 text-ios-indigo' },
+  { id: 'sport', label: 'Sport', placeholder: 'Sportunterricht…', chip: 'bg-ios-green/15 text-ios-green' },
 ];
 
-const FREITAG_FIELDS: { id: SchoolField; label: string; placeholder: string }[] = [
-  { id: 'wbl', label: 'WBL', placeholder: 'Wirtschafts- und Betriebslehre…' },
-  { id: 'englisch', label: 'Englisch', placeholder: 'Englischunterricht…' },
-  { id: 'deutsch', label: 'Deutsch', placeholder: 'Deutschunterricht…' },
-  { id: 'dkrypt', label: 'D-KRYPT', placeholder: 'Kryptologie & Sicherheit…' },
+const FREITAG_FIELDS: SubjectField[] = [
+  { id: 'wbl', label: 'WBL', placeholder: 'Wirtschafts- und Betriebslehre…', chip: 'bg-ios-orange/15 text-ios-orange' },
+  { id: 'englisch', label: 'Englisch', placeholder: 'Englischunterricht…', chip: 'bg-ios-teal/15 text-ios-teal' },
+  { id: 'deutsch', label: 'Deutsch', placeholder: 'Deutschunterricht…', chip: 'bg-ios-purple/15 text-ios-purple' },
+  { id: 'dkrypt', label: 'D-KRYPT', placeholder: 'Kryptologie & Sicherheit…', chip: 'bg-ios-pink/15 text-ios-pink' },
 ];
 
 export default function ReportDetailPage() {
@@ -41,6 +43,8 @@ export default function ReportDetailPage() {
   const [aiSchoolLoading, setAiSchoolLoading] = useState(false);
   const [aiWorkLoading, setAiWorkLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const [saveState, setSaveState] = useState<'idle' | 'dirty' | 'saving' | 'saved' | 'error'>('idle');
   const loadedRef = useRef(false);
@@ -171,6 +175,25 @@ export default function ReportDetailPage() {
     }
   }
 
+  async function handleDelete() {
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      // Bestätigung nach kurzer Zeit wieder zurücksetzen, falls nicht getippt wird.
+      setTimeout(() => setConfirmDelete(false), 4000);
+      return;
+    }
+    setDeleting(true);
+    try {
+      await apiFetch(`/api/reports/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      toast('Bericht gelöscht.', 'success');
+      router.replace('/');
+    } catch (err) {
+      toast((err as Error).message, 'error');
+      setDeleting(false);
+      setConfirmDelete(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-[100dvh] items-center justify-center">
@@ -238,18 +261,30 @@ export default function ReportDetailPage() {
         </button>
       </div>
 
-      <div className="ios-group-title">Betriebliche Tätigkeiten</div>
-      <div className="ios-group p-3">
-        <textarea
-          className="ios-textarea min-h-[150px]"
-          placeholder="Trage hier deine betrieblichen Tätigkeiten als Stichpunkte ein…"
-          value={workActivities}
-          onChange={(e) => setWorkActivities(e.target.value)}
-        />
-        <button onClick={refineWork} disabled={aiWorkLoading} className="ios-btn-tinted mt-3 w-full">
-          {aiWorkLoading ? <span className="ios-spinner" /> : <IconSparkles />}
-          KI Überarbeiten
-        </button>
+      <div className="ios-group mt-6">
+        <div className="flex items-center justify-between border-b border-separator px-4 py-3">
+          <div className="flex items-baseline gap-2">
+            <h2 className="text-[17px] font-bold tracking-tight">Betrieb</h2>
+            <span className="text-[12px] font-medium text-label-secondary">Tätigkeiten der Woche</span>
+          </div>
+          {workActivities.trim() && (
+            <span className="flex items-center text-ios-green" title="Eintrag vorhanden">
+              <IconCheck size={13} />
+            </span>
+          )}
+        </div>
+        <div className="px-3.5 py-3">
+          <textarea
+            className="ios-textarea min-h-[150px]"
+            placeholder="Trage hier deine betrieblichen Tätigkeiten als Stichpunkte ein…"
+            value={workActivities}
+            onChange={(e) => setWorkActivities(e.target.value)}
+          />
+          <button onClick={refineWork} disabled={aiWorkLoading} className="ios-btn-tinted mt-3 w-full">
+            {aiWorkLoading ? <span className="ios-spinner" /> : <IconSparkles />}
+            KI Überarbeiten
+          </button>
+        </div>
       </div>
 
       <div className="px-4 pb-8 pt-6">
@@ -275,16 +310,26 @@ function DaySection({
   title: string;
   sick: boolean;
   onToggleSick: () => void;
-  subjectFields: { id: SchoolField; label: string; placeholder: string }[];
+  subjectFields: SubjectField[];
   values: Record<SchoolField, string>;
   selected: Record<SchoolField, boolean>;
   onChangeValue: (id: SchoolField, value: string) => void;
   onToggleSelected: (id: SchoolField) => void;
 }) {
+  const filledCount = subjectFields.filter((f) => values[f.id].trim()).length;
+
   return (
-    <div className="mt-2">
-      <div className="flex items-center justify-between px-4 pt-4">
-        <h2 className="text-[13px] font-semibold uppercase tracking-wide text-label-secondary">{title}</h2>
+    <div className="ios-group mt-4">
+      {/* Tages-Header */}
+      <div className="flex items-center justify-between border-b border-separator px-4 py-3">
+        <div className="flex items-baseline gap-2">
+          <h2 className="text-[17px] font-bold tracking-tight">{title}</h2>
+          {!sick && (
+            <span className="text-[12px] font-medium text-label-secondary">
+              {filledCount}/{subjectFields.length} ausgefüllt
+            </span>
+          )}
+        </div>
         <button
           onClick={onToggleSick}
           className={`ios-btn !px-3 !py-1.5 text-[12px] ${
@@ -296,24 +341,42 @@ function DaySection({
         </button>
       </div>
 
-      <div className={`mt-2 space-y-3 px-4 transition-opacity ${sick ? 'pointer-events-none opacity-30' : ''}`}>
-        {subjectFields.map((f) => (
-          <div key={f.id} className="ios-group">
-            <div className="ios-row justify-between !min-h-0 !py-2.5">
-              <span className="text-[13px] font-bold uppercase tracking-wide text-label-secondary">{f.label}</span>
-              <Switch on={selected[f.id]} onToggle={() => onToggleSelected(f.id)} label={`${f.label} für KI-Korrektur einbeziehen`} />
-            </div>
-            <div className="border-t border-separator p-2.5">
+      {sick ? (
+        <div className="flex items-center gap-2.5 px-4 py-4 text-[13px] text-label-secondary">
+          <IconBed size={14} className="flex-shrink-0 text-ios-green" />
+          Als krank markiert – für diesen Tag sind keine Einträge nötig.
+        </div>
+      ) : (
+        subjectFields.map((f) => {
+          const filled = Boolean(values[f.id].trim());
+          return (
+            <div key={f.id} className="border-b border-separator px-3.5 py-3 last:border-b-0">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className={`rounded-md px-2 py-0.5 text-[12px] font-bold uppercase tracking-wide ${f.chip}`}>
+                    {f.label}
+                  </span>
+                  {filled && (
+                    <span className="flex items-center text-ios-green" title="Eintrag vorhanden">
+                      <IconCheck size={13} />
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-medium text-label-secondary">KI-Korrektur</span>
+                  <Switch on={selected[f.id]} onToggle={() => onToggleSelected(f.id)} label={`${f.label} für KI-Korrektur einbeziehen`} />
+                </div>
+              </div>
               <textarea
-                className="ios-textarea min-h-[90px] !bg-transparent !border-0 !px-1 !ring-0"
+                className="ios-textarea min-h-[90px]"
                 placeholder={f.placeholder}
                 value={values[f.id]}
                 onChange={(e) => onChangeValue(f.id, e.target.value)}
               />
             </div>
-          </div>
-        ))}
-      </div>
+          );
+        })
+      )}
     </div>
   );
 }

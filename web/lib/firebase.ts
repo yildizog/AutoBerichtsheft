@@ -32,6 +32,13 @@ export async function firebasePut<T = unknown>(path: string, data: T): Promise<v
   if (!res.ok) throw new Error(`Firebase PUT ${path} fehlgeschlagen: ${res.status}`);
 }
 
+export async function firebaseDelete(path: string): Promise<void> {
+  const { url, secret, configured } = getConfig();
+  if (!configured) throw new Error('Firebase ist nicht konfiguriert (FIREBASE_URL/FIREBASE_SECRET fehlen).');
+  const res = await fetch(`${url}/${path}.json?auth=${secret}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error(`Firebase DELETE ${path} fehlgeschlagen: ${res.status}`);
+}
+
 export async function firebasePatch<T = unknown>(path: string, data: Partial<T>): Promise<void> {
   const { url, secret, configured } = getConfig();
   if (!configured) throw new Error('Firebase ist nicht konfiguriert (FIREBASE_URL/FIREBASE_SECRET fehlen).');

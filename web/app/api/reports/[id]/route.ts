@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { firebaseGet, firebasePatch } from '@/lib/firebase';
+import { firebaseDelete, firebaseGet, firebasePatch } from '@/lib/firebase';
 import { ReportContent, ReportDoc, SCHOOL_FIELDS } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -42,6 +42,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     await firebasePatch(`reports/${id}`, update);
     return NextResponse.json({ ok: true, updatedAt: update.updatedAt });
+  } catch (err) {
+    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+  }
+}
+
+export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const id = encodeURIComponent(params.id);
+    const existing = await firebaseGet<ReportDoc>(`reports/${id}`);
+    if (!existing) return NextResponse.json({ error: 'Bericht nicht gefunden.' }, { status: 404 });
+    await firebaseDelete(`reports/${id}`);
+    return NextResponse.json({ ok: true });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });
   }
