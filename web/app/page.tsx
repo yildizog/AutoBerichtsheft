@@ -110,6 +110,16 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleDeleteReport(id: string) {
+    try {
+      await apiFetch(`/api/reports/${encodeURIComponent(id)}`, { method: 'DELETE' });
+      setReports((rs) => rs.filter((r) => r.id !== id));
+      toast('Bericht gelöscht.', 'success');
+    } catch (err) {
+      toast((err as Error).message, 'error');
+    }
+  }
+
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
     router.replace('/login');
@@ -212,7 +222,7 @@ export default function DashboardPage() {
         ) : (
           <div className="ios-group">
             {filteredReports.map((r) => (
-              <ReportRow key={r.id} report={r} isPending={pendingWeeks.has(r.id)} />
+              <ReportRow key={r.id} report={r} isPending={pendingWeeks.has(r.id)} onDelete={handleDeleteReport} />
             ))}
           </div>
         )}

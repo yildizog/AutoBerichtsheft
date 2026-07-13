@@ -1,8 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { Report, SCHOOL_FIELDS } from '@/lib/types';
-import { IconChevron, IconDocument } from './icons';
+import { IconChevron, IconDocument, IconX } from './icons';
 
 function describeStatus(report: Report, isPending: boolean) {
   if (isPending) return { label: 'Genehmigung ausstehend', tone: 'orange' as const };
@@ -21,8 +22,37 @@ const TONE_CLASSES: Record<string, string> = {
   gray: 'bg-label/[0.08] text-label-secondary',
 };
 
-export function ReportRow({ report, isPending }: { report: Report; isPending: boolean }) {
+export function ReportRow({
+  report,
+  isPending,
+  onDelete,
+}: {
+  report: Report;
+  isPending: boolean;
+  onDelete?: (id: string) => Promise<void>;
+}) {
   const { label, tone } = describeStatus(report, isPending);
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete(e: React.MouseEvent) {
+    // Klick darf nicht zusätzlich den Bericht öffnen (Zeile ist ein Link).
+    e.preventDefault();
+    e.stopPropagation();
+    if (!onDelete) return;
+    if (!confirming) {
+      setConfirming(true);
+      setTimeout(() => setConfirming(false), 4000);
+      return;
+    }
+    setDeleting(true);
+    try {
+      await onDelete(report.id);
+    } finally {
+      setDeleting(false);
+      setConfirming(false);
+    }
+  }
 
   const tags: string[] = [];
   if (report.content) {
@@ -50,6 +80,19 @@ export function ReportRow({ report, isPending }: { report: Report; isPending: bo
           )}
         </div>
       </div>
+      {onDelete && (
+        <button
+          onClick={handleDelete}
+          aria-label={confirming ? 'Löschen bestätigen' : `Bericht ${report.dateLabel || report.id} löschen`}
+          className={`flex h-8 flex-shrink-0 items-center justify-center rounded-full transition-colors ${
+            confirming
+              ? 'gap-1 bg-ios-red px-3 text-[11px] font-semibold text-white'
+              : 'w-8 bg-ios-red/15 text-ios-red'
+          }`}
+        >
+          {deleting ? <span className="ios-spinner !border-white/40 !border-t-white" /> : confirming ? 'Sicher?' : <IconX size={13} />}
+        </button>
+      )}
       <IconChevron className="flex-shrink-0 text-label-secondary" />
     </Link>
   );
