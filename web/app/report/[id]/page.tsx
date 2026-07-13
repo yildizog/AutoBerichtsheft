@@ -287,11 +287,25 @@ export default function ReportDetailPage() {
         </div>
       </div>
 
-      <div className="px-4 pb-8 pt-6">
+      <div className="px-4 pt-6">
         <button onClick={upload} disabled={uploading} className="ios-btn-filled-green w-full py-3.5 text-[16px]">
           {uploading ? <span className="ios-spinner !border-black/30 !border-t-black" /> : <IconUpload />}
           IHK Upload starten
         </button>
+      </div>
+
+      <div className="px-4 pb-8 pt-3">
+        <button
+          onClick={handleDelete}
+          disabled={deleting}
+          className={`w-full ${confirmDelete ? 'ios-btn-filled-red' : 'ios-btn-tinted-red'}`}
+        >
+          {deleting ? <span className="ios-spinner" /> : <IconX size={14} />}
+          {confirmDelete ? 'Wirklich löschen? Erneut tippen' : 'Bericht löschen'}
+        </button>
+        <p className="mt-2 text-center text-[11px] text-label-secondary">
+          Erledigte Berichte werden nach 7 Tagen automatisch entfernt.
+        </p>
       </div>
     </div>
   );
