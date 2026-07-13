@@ -7,6 +7,7 @@ import { Report, StatusDoc } from '@/lib/types';
 import { GithubJob, GithubRun } from '@/lib/github';
 import { ReportRow } from '@/components/report-row';
 import { RunStatusCard } from '@/components/run-status-card';
+import { MonthCalendar } from '@/components/month-calendar';
 import { IconCalendar, IconFlame, IconLogout, IconRefresh } from '@/components/icons';
 import { useToast } from '@/components/providers';
 
@@ -168,6 +169,9 @@ export default function DashboardPage() {
       <div className="ios-group p-1">
         <RunStatusCard run={run} jobs={jobs} />
       </div>
+
+      <div className="ios-group-title">Monatsübersicht</div>
+      <MonthCalendar reports={reports} pendingWeeks={pendingWeeks} />
 
       <div className="ios-group-title">Neue Woche abholen</div>
       <div className="ios-group">
