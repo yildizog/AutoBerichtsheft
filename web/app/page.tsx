@@ -335,7 +335,8 @@ export default function DashboardPage() {
       </div>
 
       {selectMode && (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-separator bg-surface/95 px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur">
+        /* z-50: muss über der Tab-Bar (z-40) liegen, sonst verdeckt diese die Buttons. */
+        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-separator bg-surface/95 px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur">
           <div className="mx-auto flex max-w-md items-center gap-2">
             <span className="min-w-[86px] text-[13px] font-medium text-label-secondary">
               {selectedIds.size} ausgewählt

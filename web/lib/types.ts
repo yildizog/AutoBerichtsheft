@@ -6,9 +6,26 @@ export interface SickDays {
   freitag: boolean;
 }
 
+export const ABSENCE_TYPES = ['krank', 'urlaub', 'frei', 'feiertag'] as const;
+export type AbsenceType = (typeof ABSENCE_TYPES)[number];
+
+export const ABSENCE_LABELS: Record<AbsenceType, string> = {
+  krank: 'Krank',
+  urlaub: 'Urlaub',
+  frei: 'Frei',
+  feiertag: 'Feiertag',
+};
+
+export interface DayAbsences {
+  montag: AbsenceType | null;
+  freitag: AbsenceType | null;
+}
+
 export interface ReportContent extends Partial<Record<SchoolField, string>> {
   workActivities?: string;
+  /** Veraltet – nur noch für alte Berichte; neue Berichte nutzen `absences`. */
   sickDays?: SickDays;
+  absences?: DayAbsences;
 }
 
 export interface ReportDoc {

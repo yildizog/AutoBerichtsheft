@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { apiFetch } from '@/lib/client/api';
-import { Report, SchoolField, SickDays } from '@/lib/types';
+import { ABSENCE_LABELS, AbsenceType, DayAbsences, Report, SchoolField } from '@/lib/types';
+import { getHolidayName, getWeekDays } from '@/lib/holidays';
 import { Switch } from '@/components/switch';
-import { IconBed, IconCheck, IconChevron, IconSparkles, IconUpload, IconX } from '@/components/icons';
+import { IconBed, IconCalendar, IconCheck, IconChevron, IconSparkles, IconUpload, IconX } from '@/components/icons';
 import { useToast } from '@/components/providers';
 
 type SubjectField = { id: SchoolField; label: string; placeholder: string; chip: string };
@@ -38,7 +39,8 @@ export default function ReportDetailPage() {
     stdm: true, evp: true, sport: true, wbl: true, englisch: true, deutsch: true, dkrypt: true,
   });
   const [workActivities, setWorkActivities] = useState('');
-  const [sickDays, setSickDays] = useState<SickDays>({ montag: false, freitag: false });
+  const [absences, setAbsences] = useState<DayAbsences>({ montag: null, freitag: null });
+  const [holidays, setHolidays] = useState<{ montag: string | null; freitag: string | null }>({ montag: null, freitag: null });
 
   const [aiSchoolLoading, setAiSchoolLoading] = useState(false);
   const [aiWorkLoading, setAiWorkLoading] = useState(false);
@@ -62,7 +64,24 @@ export default function ReportDetailPage() {
           wbl: c.wbl || '', englisch: c.englisch || '', deutsch: c.deutsch || '', dkrypt: c.dkrypt || '',
         });
         setWorkActivities(c.workActivities || '');
-        if (c.sickDays) setSickDays(c.sickDays);
+
+        // Feiertage (NRW) für Montag/Freitag dieser Woche ermitteln.
+        const week = getWeekDays(data.report.dateLabel || id);
+        const holidayNames = {
+          montag: week ? getHolidayName(week.montag) : null,
+          freitag: week ? getHolidayName(week.freitag) : null,
+        };
+        setHolidays(holidayNames);
+
+        // Neue Berichte nutzen `absences`, alte nur `sickDays` (boolean = krank).
+        const loaded: DayAbsences = c.absences
+          ? { montag: c.absences.montag ?? null, freitag: c.absences.freitag ?? null }
+          : { montag: c.sickDays?.montag ? 'krank' : null, freitag: c.sickDays?.freitag ? 'krank' : null };
+        // Feiertage automatisch vorbelegen, sofern der Tag nicht schon markiert ist.
+        if (!loaded.montag && holidayNames.montag) loaded.montag = 'feiertag';
+        if (!loaded.freitag && holidayNames.freitag) loaded.freitag = 'feiertag';
+        setAbsences(loaded);
+
         skipNextSaveRef.current = true;
         loadedRef.current = true;
       } catch (err) {
@@ -74,12 +93,22 @@ export default function ReportDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  function buildContent() {
+    return {
+      ...fields,
+      workActivities,
+      absences,
+      // Für ältere Konsumenten weiterhin mitschreiben (true = krank).
+      sickDays: { montag: absences.montag === 'krank', freitag: absences.freitag === 'krank' },
+    };
+  }
+
   async function saveContent(): Promise<boolean> {
     setSaveState('saving');
     try {
       await apiFetch(`/api/reports/${encodeURIComponent(id)}`, {
         method: 'PATCH',
-        body: JSON.stringify({ content: { ...fields, workActivities, sickDays } }),
+        body: JSON.stringify({ content: buildContent() }),
       });
       setSaveState('saved');
       return true;
@@ -102,10 +131,11 @@ export default function ReportDetailPage() {
     }, 1200);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fields, workActivities, sickDays]);
+  }, [fields, workActivities, absences]);
 
-  function toggleSick(day: keyof SickDays) {
-    setSickDays((s) => ({ ...s, [day]: !s[day] }));
+  function selectAbsence(day: keyof DayAbsences, type: AbsenceType) {
+    // Erneutes Tippen auf die aktive Option hebt die Markierung wieder auf.
+    setAbsences((a) => ({ ...a, [day]: a[day] === type ? null : type }));
   }
 
   function toggleSelectAll(checked: boolean) {
@@ -117,11 +147,11 @@ export default function ReportDetailPage() {
   async function refineSchool() {
     const ids = (Object.keys(selected) as SchoolField[]).filter((k) => {
       if (!selected[k]) return false;
-      if (sickDays.montag && ['stdm', 'evp', 'sport'].includes(k)) return false;
-      if (sickDays.freitag && ['wbl', 'englisch', 'deutsch', 'dkrypt'].includes(k)) return false;
+      if (absences.montag && ['stdm', 'evp', 'sport'].includes(k)) return false;
+      if (absences.freitag && ['wbl', 'englisch', 'deutsch', 'dkrypt'].includes(k)) return false;
       return true;
     });
-    if (!ids.length) return toast('Nichts zum Korrigieren ausgewählt (oder Tage sind als "Krank" markiert).', 'error');
+    if (!ids.length) return toast('Nichts zum Korrigieren ausgewählt (oder Tage sind als abwesend markiert).', 'error');
 
     const data: Record<string, string> = {};
     ids.forEach((k) => (data[k] = fields[k]));
@@ -166,7 +196,7 @@ export default function ReportDetailPage() {
       if (!saved) throw new Error('Speichern in Firebase fehlgeschlagen – Upload abgebrochen.');
       await apiFetch('/api/actions/upload', {
         method: 'POST',
-        body: JSON.stringify({ reportId: id, content: { ...fields, workActivities, sickDays } }),
+        body: JSON.stringify({ reportId: id, content: buildContent() }),
       });
       toast('Upload-Auftrag gesendet.', 'success');
     } catch (err) {
@@ -247,8 +277,9 @@ export default function ReportDetailPage() {
 
       <DaySection
         title="Montag"
-        sick={sickDays.montag}
-        onToggleSick={() => toggleSick('montag')}
+        absence={absences.montag}
+        holidayName={holidays.montag}
+        onSelectAbsence={(t) => selectAbsence('montag', t)}
         subjectFields={MONTAG_FIELDS}
         values={fields}
         selected={selected}
@@ -257,8 +288,9 @@ export default function ReportDetailPage() {
       />
       <DaySection
         title="Freitag"
-        sick={sickDays.freitag}
-        onToggleSick={() => toggleSick('freitag')}
+        absence={absences.freitag}
+        holidayName={holidays.freitag}
+        onSelectAbsence={(t) => selectAbsence('freitag', t)}
         subjectFields={FREITAG_FIELDS}
         values={fields}
         selected={selected}
@@ -338,8 +370,9 @@ export default function ReportDetailPage() {
 
 function DaySection({
   title,
-  sick,
-  onToggleSick,
+  absence,
+  holidayName,
+  onSelectAbsence,
   subjectFields,
   values,
   selected,
@@ -347,8 +380,9 @@ function DaySection({
   onToggleSelected,
 }: {
   title: string;
-  sick: boolean;
-  onToggleSick: () => void;
+  absence: AbsenceType | null;
+  holidayName: string | null;
+  onSelectAbsence: (type: AbsenceType) => void;
   subjectFields: SubjectField[];
   values: Record<SchoolField, string>;
   selected: Record<SchoolField, boolean>;
@@ -356,34 +390,55 @@ function DaySection({
   onToggleSelected: (id: SchoolField) => void;
 }) {
   const filledCount = subjectFields.filter((f) => values[f.id].trim()).length;
+  // "Feiertag" nur anbieten, wenn der Tag wirklich ein Feiertag ist (oder so gespeichert wurde).
+  const options: AbsenceType[] = holidayName || absence === 'feiertag' ? ['krank', 'urlaub', 'frei', 'feiertag'] : ['krank', 'urlaub', 'frei'];
+
+  const absenceMessage: Record<AbsenceType, string> = {
+    krank: 'Als krank markiert – für diesen Tag sind keine Einträge nötig.',
+    urlaub: 'Urlaub – für diesen Tag sind keine Einträge nötig.',
+    frei: 'Freier Tag – für diesen Tag sind keine Einträge nötig.',
+    feiertag: `Feiertag${holidayName ? ` (${holidayName})` : ''} – im Bericht wird „Feiertag“ eingetragen.`,
+  };
 
   return (
     <div className="ios-group mt-4">
       {/* Tages-Header */}
-      <div className="flex items-center justify-between border-b border-separator px-4 py-3">
+      <div className="flex items-center justify-between gap-2 border-b border-separator px-4 py-3">
         <div className="flex items-baseline gap-2">
           <h2 className="text-[17px] font-bold tracking-tight">{title}</h2>
-          {!sick && (
+          {!absence && (
             <span className="text-[12px] font-medium text-label-secondary">
               {filledCount}/{subjectFields.length} ausgefüllt
             </span>
           )}
         </div>
-        <button
-          onClick={onToggleSick}
-          className={`ios-btn !px-3 !py-1.5 text-[12px] ${
-            sick ? 'bg-ios-green text-black' : 'bg-ios-red/15 text-ios-red'
-          }`}
-        >
-          <IconBed size={12} />
-          {sick ? 'Als krank markiert' : 'Krank'}
-        </button>
+        <div className="flex flex-wrap justify-end gap-1.5">
+          {options.map((type) => {
+            const active = absence === type;
+            return (
+              <button
+                key={type}
+                onClick={() => onSelectAbsence(type)}
+                className={`ios-btn !px-2.5 !py-1.5 text-[12px] ${
+                  active ? 'bg-ios-green text-black' : 'bg-ios-red/15 text-ios-red'
+                }`}
+              >
+                {type === 'krank' && <IconBed size={12} />}
+                {ABSENCE_LABELS[type]}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {sick ? (
+      {absence ? (
         <div className="flex items-center gap-2.5 px-4 py-4 text-[13px] text-label-secondary">
-          <IconBed size={14} className="flex-shrink-0 text-ios-green" />
-          Als krank markiert – für diesen Tag sind keine Einträge nötig.
+          {absence === 'krank' ? (
+            <IconBed size={14} className="flex-shrink-0 text-ios-green" />
+          ) : (
+            <IconCalendar size={14} className="flex-shrink-0 text-ios-green" />
+          )}
+          {absenceMessage[absence]}
         </div>
       ) : (
         subjectFields.map((f) => {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { firebaseDelete, firebaseGet, firebasePatch } from '@/lib/firebase';
-import { ReportContent, ReportDoc, SCHOOL_FIELDS } from '@/lib/types';
+import { ABSENCE_TYPES, AbsenceType, ReportContent, ReportDoc, SCHOOL_FIELDS } from '@/lib/types';
 
 export const runtime = 'nodejs';
 
@@ -50,6 +50,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         update['content/sickDays'] = {
           montag: Boolean(content.sickDays.montag),
           freitag: Boolean(content.sickDays.freitag),
+        };
+      }
+      if (content.absences && typeof content.absences === 'object') {
+        const sanitize = (v: unknown): AbsenceType | null =>
+          ABSENCE_TYPES.includes(v as AbsenceType) ? (v as AbsenceType) : null;
+        update['content/absences'] = {
+          montag: sanitize(content.absences.montag),
+          freitag: sanitize(content.absences.freitag),
         };
       }
     }

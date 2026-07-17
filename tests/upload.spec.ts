@@ -11,12 +11,12 @@ test('Teil 2: IHK Upload', async ({ page }) => {
     // Status auf "running" setzen
     if (reportId) await updateStatus(reportId, 'running', 'Upload gestartet...');
 
-    // Objekt initialisieren (inkl. dem neuen Feld workActivities und sickDays)
-    // Objekt initialisieren
+    // Objekt initialisieren (inkl. workActivities, sickDays und absences)
     let contentObj = {
         stdm: '', deutsch: '', evp: '', sport: '', wbl: '', englisch: '', dkrypt: '',
         workActivities: '',
-        sickDays: { montag: false, freitag: false } // NEU
+        sickDays: { montag: false, freitag: false }, // Veraltet (nur alte Berichte)
+        absences: { montag: null, freitag: null } as { montag: string | null; freitag: string | null }
     };
 
     try {
@@ -28,21 +28,33 @@ test('Teil 2: IHK Upload', async ({ page }) => {
         console.error("Fehler beim Parsen des Inputs:", e);
     }
 
-    // --- LOGIK FÜR SCHULINHALTE (Krank-Handling) ---
+    // --- LOGIK FÜR SCHULINHALTE (Abwesenheits-Handling) ---
     // Montag: STDM, EVP, Sport
     let montagContent = `Montag:\nSoftwaretechnologie und Datenmanagment: ${contentObj.stdm}\nEntwicklung Vernetzter Prozesse: ${contentObj.evp}\nSport: ${contentObj.sport}`;
 
     // Freitag: WBL, Englisch, Deutsch, D-Krypt
     let freitagContent = `Freitag:\nWBL: ${contentObj.wbl}\nEnglisch: ${contentObj.englisch}\nDeutsch: ${contentObj.deutsch}\nD-KRYPT: ${contentObj.dkrypt}`;
 
-    // Wenn Montag krank ist, alles überschreiben
-    if (contentObj.sickDays && contentObj.sickDays.montag) {
-        montagContent = "Montag:\nKrank";
+    // Abwesenheit pro Tag: 'krank' | 'urlaub' | 'frei' | 'feiertag' (neu über absences,
+    // alte Berichte haben nur sickDays mit boolean = krank).
+    const absenceLabels: Record<string, string> = {
+        krank: 'Krank', urlaub: 'Urlaub', frei: 'Frei', feiertag: 'Feiertag'
+    };
+    const getAbsence = (day: 'montag' | 'freitag'): string | null => {
+        const fromAbsences = contentObj.absences && contentObj.absences[day];
+        if (fromAbsences && absenceLabels[fromAbsences]) return absenceLabels[fromAbsences];
+        if (contentObj.sickDays && contentObj.sickDays[day]) return 'Krank';
+        return null;
+    };
+
+    const montagAbsence = getAbsence('montag');
+    if (montagAbsence) {
+        montagContent = `Montag:\n${montagAbsence}`;
     }
 
-    // Wenn Freitag krank ist, alles überschreiben
-    if (contentObj.sickDays && contentObj.sickDays.freitag) {
-        freitagContent = "Freitag:\nKrank";
+    const freitagAbsence = getAbsence('freitag');
+    if (freitagAbsence) {
+        freitagContent = `Freitag:\n${freitagAbsence}`;
     }
 
     const schoolInhalt = `${montagContent}\n\n${freitagContent}`;
