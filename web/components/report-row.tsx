@@ -13,8 +13,8 @@ function describeStatus(report: Report, isPending: boolean, isMissing: boolean, 
   if (report.status === 'success') {
     if (isMissing) return { label: 'Fehlt im IHK-Portal', tone: 'red' as const };
     // Ohne Check-Ergebnis wissen wir nur, dass hochgeladen wurde.
-    if (hasCheck) return { label: 'Vom Ausbilder genehmigt', tone: 'green' as const };
-    return { label: 'Hochgeladen', tone: 'green' as const };
+    if (hasCheck) return { label: 'Genehmigt & Fertig', tone: 'green' as const };
+    return { label: 'Hochgeladen', tone: 'yellow' as const };
   }
   if (report.status === 'waiting') return { label: 'In Bearbeitung', tone: 'gray' as const };
   return { label: report.status || 'Unbekannt', tone: 'gray' as const };
@@ -23,6 +23,7 @@ function describeStatus(report: Report, isPending: boolean, isMissing: boolean, 
 const TONE_CLASSES: Record<string, string> = {
   green: 'bg-ios-green/15 text-ios-green',
   orange: 'bg-ios-orange/15 text-ios-orange',
+  yellow: 'bg-ios-yellow/15 text-ios-yellow',
   blue: 'bg-ios-blue/15 text-ios-blue',
   red: 'bg-ios-red/15 text-ios-red',
   gray: 'bg-label/[0.08] text-label-secondary',
