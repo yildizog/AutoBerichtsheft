@@ -8,19 +8,10 @@ import { GithubJob, GithubRun } from '@/lib/github';
 import { ReportRow } from '@/components/report-row';
 import { RunStatusCard } from '@/components/run-status-card';
 import { MonthCalendar } from '@/components/month-calendar';
-import { IconCalendar, IconFlame, IconLogout, IconRefresh } from '@/components/icons';
+import { IconCalendar, IconLogout, IconRefresh } from '@/components/icons';
 import { useToast } from '@/components/providers';
 
 type Filter = 'all' | 'pending' | 'done';
-
-function computeStreak(reports: Report[]): number {
-  let streak = 0;
-  for (const r of reports) {
-    if (r.status === 'success' || r.status === 'waiting') streak++;
-    else break;
-  }
-  return streak;
-}
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -86,7 +77,7 @@ export default function DashboardPage() {
   }, []);
 
   const pendingWeeks = useMemo(() => new Set(status?.details?.pending || []), [status]);
-  const streak = useMemo(() => computeStreak(reports), [reports]);
+  const missingWeeks = useMemo(() => new Set(status?.details?.missing || []), [status]);
 
   const filteredReports = useMemo(() => {
     if (filter === 'pending') {
@@ -238,16 +229,6 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {streak > 0 && (
-        <div className="mx-4 mt-4 flex items-center gap-3 rounded-ios-lg border border-ios-orange/25 bg-ios-orange/10 px-4 py-3">
-          <IconFlame className="text-ios-orange" size={22} />
-          <div>
-            <div className="text-[15px] font-bold">{streak} Woche{streak === 1 ? '' : 'n'} am Stück erledigt</div>
-            <div className="text-[12px] text-label-secondary">Weiter so – keine Lücke seit {streak} Woche{streak === 1 ? '' : 'n'}.</div>
-          </div>
-        </div>
-      )}
-
       {status && status.missingCount > 0 && (
         <div className="mx-4 mt-4 rounded-ios-lg border border-ios-red/25 bg-ios-red/10 px-4 py-3">
           <div className="text-[15px] font-bold text-ios-red">{status.message}</div>
@@ -305,7 +286,7 @@ export default function DashboardPage() {
         <div className="ios-segment">
           <button data-active={filter === 'all'} onClick={() => setFilter('all')}>Alle</button>
           <button data-active={filter === 'pending'} onClick={() => setFilter('pending')}>Ausstehend</button>
-          <button data-active={filter === 'done'} onClick={() => setFilter('done')}>Erledigt</button>
+          <button data-active={filter === 'done'} onClick={() => setFilter('done')}>Genehmigt</button>
         </div>
       </div>
 
@@ -323,6 +304,8 @@ export default function DashboardPage() {
                 key={r.id}
                 report={r}
                 isPending={pendingWeeks.has(r.id)}
+                isMissing={missingWeeks.has(r.id)}
+                hasCheck={status !== null}
                 onDelete={handleDeleteReport}
                 onMarkDone={handleMarkDone}
                 selectMode={selectMode}

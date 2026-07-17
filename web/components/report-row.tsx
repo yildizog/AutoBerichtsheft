@@ -5,12 +5,18 @@ import Link from 'next/link';
 import { Report, SCHOOL_FIELDS } from '@/lib/types';
 import { IconCheck, IconChevron, IconDocument, IconX } from './icons';
 
-function describeStatus(report: Report, isPending: boolean) {
-  if (isPending) return { label: 'Genehmigung ausstehend', tone: 'orange' as const };
-  if (report.status === 'success') return { label: 'Erledigt', tone: 'green' as const };
-  if (report.status === 'waiting') return { label: 'In Bearbeitung', tone: 'orange' as const };
+function describeStatus(report: Report, isPending: boolean, isMissing: boolean, hasCheck: boolean) {
   if (report.status === 'running') return { label: 'Läuft…', tone: 'blue' as const };
   if (report.status === 'failed') return { label: 'Fehlgeschlagen', tone: 'red' as const };
+  // Genehmigungsstand kommt aus dem täglichen IHK-Check (status.details).
+  if (isPending) return { label: 'Wartet auf Genehmigung', tone: 'orange' as const };
+  if (report.status === 'success') {
+    if (isMissing) return { label: 'Fehlt im IHK-Portal', tone: 'red' as const };
+    // Ohne Check-Ergebnis wissen wir nur, dass hochgeladen wurde.
+    if (hasCheck) return { label: 'Vom Ausbilder genehmigt', tone: 'green' as const };
+    return { label: 'Hochgeladen', tone: 'green' as const };
+  }
+  if (report.status === 'waiting') return { label: 'In Bearbeitung', tone: 'gray' as const };
   return { label: report.status || 'Unbekannt', tone: 'gray' as const };
 }
 
@@ -25,6 +31,8 @@ const TONE_CLASSES: Record<string, string> = {
 export function ReportRow({
   report,
   isPending,
+  isMissing = false,
+  hasCheck = false,
   onDelete,
   onMarkDone,
   selectMode = false,
@@ -33,13 +41,15 @@ export function ReportRow({
 }: {
   report: Report;
   isPending: boolean;
+  isMissing?: boolean;
+  hasCheck?: boolean;
   onDelete?: (id: string) => Promise<void>;
   onMarkDone?: (id: string) => Promise<void>;
   selectMode?: boolean;
   selected?: boolean;
   onToggleSelect?: (id: string) => void;
 }) {
-  const { label, tone } = describeStatus(report, isPending);
+  const { label, tone } = describeStatus(report, isPending, isMissing, hasCheck);
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [markingDone, setMarkingDone] = useState(false);

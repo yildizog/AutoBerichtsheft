@@ -174,11 +174,11 @@ export function MonthCalendar({ reports, pendingWeeks }: { reports: Report[]; pe
       <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 border-t border-separator pt-3 text-[11px] text-label-secondary">
         <span className="flex items-center gap-1.5">
           <span className="ios-dot bg-ios-green" />
-          Erledigt
+          Genehmigt
         </span>
         <span className="flex items-center gap-1.5">
           <span className="ios-dot bg-ios-yellow" />
-          In Bearbeitung
+          In Bearbeitung / wartet auf Genehmigung
         </span>
         <span className="flex items-center gap-1.5">
           <span className="ios-dot bg-ios-red" />

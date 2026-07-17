@@ -42,11 +42,9 @@ Diese App verschiebt alle Geheimnisse auf den Server:
 
 - **Installierbar wie eine native App**: Manifest + generierte Icons, per
   "Zum Home-Bildschirm hinzufügen" auf iOS wie eine echte App nutzbar.
-- **Serien-Anzeige ("Streak")**: zeigt, wie viele Wochen am Stück lückenlos
-  eingetragen wurden – kleiner Motivationsschub im Dashboard.
 - **Wöchentlicher Digest per Mail** (`app/api/cron/weekly-digest`, per Vercel
   Cron): freiwillige, in den Einstellungen aktivierbare Zusammenfassung
-  ("X Wochen Serie, Y ausstehend"). Ergänzt den bestehenden
+  ("X Wochen eingetragen, Y ausstehend"). Ergänzt den bestehenden
   "fehlende Berichte"-Alarm aus `tests/check_missing_reports.spec.ts`,
   der unverändert und unabhängig davon weiterläuft.
 - **Passwortgeschützter Zugriff**, damit die App gefahrlos öffentlich auf

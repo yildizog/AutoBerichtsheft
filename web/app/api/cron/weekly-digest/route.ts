@@ -6,8 +6,8 @@ import { Report, ReportDoc, StatusDoc } from '@/lib/types';
 
 export const runtime = 'nodejs';
 
-// Neues, eigenständiges Feature: einmal pro Woche eine freundliche Zusammenfassung
-// per Mail ("X Wochen eingetragen, Y offen, aktuelle Serie: Z Wochen am Stück").
+// Eigenständiges Feature: einmal pro Woche eine freundliche Zusammenfassung
+// per Mail ("X Wochen eingetragen, Y offen").
 // Ergänzt den bestehenden "fehlende Berichte"-Alarm aus
 // tests/check_missing_reports.spec.ts, ersetzt ihn aber nicht – diese Datei ist
 // komplett unabhängig davon.
@@ -49,7 +49,6 @@ export async function GET(req: NextRequest) {
           .sort((a, b) => (a.id < b.id ? 1 : -1))
       : [];
 
-    const streak = computeStreak(reports);
     const latest = reports.slice(0, 4);
 
     const lines = [
@@ -58,7 +57,6 @@ export async function GET(req: NextRequest) {
       status
         ? `Status: ${status.message} (fehlend: ${status.missingCount}, ausstehend: ${status.pendingCount})`
         : 'Status: noch keine Prüfung durchgeführt.',
-      `Aktuelle Serie ohne Lücke: ${streak} Woche(n)`,
       ``,
       `Letzte Wochen:`,
       ...latest.map((r) => `- ${r.dateLabel || r.id}: ${r.status || 'unbekannt'}`),
@@ -66,21 +64,12 @@ export async function GET(req: NextRequest) {
 
     await sendMail({
       to: settings.digestEmail,
-      subject: `📋 Wochenüberblick Berichtsheft – Serie: ${streak} Woche(n)`,
+      subject: `📋 Wochenüberblick Berichtsheft`,
       text: lines.join('\n'),
     });
 
-    return NextResponse.json({ sent: true, streak });
+    return NextResponse.json({ sent: true });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 500 });
   }
-}
-
-function computeStreak(reports: Report[]): number {
-  let streak = 0;
-  for (const r of reports) {
-    if (r.status === 'success' || r.status === 'waiting') streak++;
-    else break;
-  }
-  return streak;
 }
