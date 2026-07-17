@@ -34,6 +34,10 @@ export default function DashboardPage() {
   const [filter, setFilter] = useState<Filter>('all');
   const [scrapeDate, setScrapeDate] = useState('');
   const [scraping, setScraping] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchWorking, setBatchWorking] = useState<'done' | 'delete' | null>(null);
+  const [confirmBatchDelete, setConfirmBatchDelete] = useState(false);
 
   async function loadReports() {
     try {
@@ -133,6 +137,71 @@ export default function DashboardPage() {
     }
   }
 
+  function toggleSelectMode() {
+    setSelectMode((on) => !on);
+    setSelectedIds(new Set());
+    setConfirmBatchDelete(false);
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds((ids) => {
+      const next = new Set(ids);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    setConfirmBatchDelete(false);
+  }
+
+  async function handleBatchDone() {
+    const ids = [...selectedIds];
+    setBatchWorking('done');
+    try {
+      const results = await Promise.allSettled(
+        ids.map((id) =>
+          apiFetch(`/api/reports/${encodeURIComponent(id)}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: 'success' }),
+          })
+        )
+      );
+      const okIds = ids.filter((_, i) => results[i].status === 'fulfilled');
+      setReports((rs) => rs.map((r) => (okIds.includes(r.id) ? { ...r, status: 'success' } : r)));
+      const failed = ids.length - okIds.length;
+      if (failed > 0) toast(`${okIds.length} markiert, ${failed} fehlgeschlagen.`, 'error');
+      else toast(`${okIds.length} Bericht${okIds.length === 1 ? '' : 'e'} als erledigt markiert.`, 'success');
+      if (failed === 0) toggleSelectMode();
+      else setSelectedIds(new Set(ids.filter((id) => !okIds.includes(id))));
+    } finally {
+      setBatchWorking(null);
+    }
+  }
+
+  async function handleBatchDelete() {
+    if (!confirmBatchDelete) {
+      setConfirmBatchDelete(true);
+      setTimeout(() => setConfirmBatchDelete(false), 4000);
+      return;
+    }
+    const ids = [...selectedIds];
+    setBatchWorking('delete');
+    try {
+      const results = await Promise.allSettled(
+        ids.map((id) => apiFetch(`/api/reports/${encodeURIComponent(id)}`, { method: 'DELETE' }))
+      );
+      const okIds = ids.filter((_, i) => results[i].status === 'fulfilled');
+      setReports((rs) => rs.filter((r) => !okIds.includes(r.id)));
+      const failed = ids.length - okIds.length;
+      if (failed > 0) toast(`${okIds.length} gelöscht, ${failed} fehlgeschlagen.`, 'error');
+      else toast(`${okIds.length} Bericht${okIds.length === 1 ? '' : 'e'} gelöscht.`, 'success');
+      if (failed === 0) toggleSelectMode();
+      else setSelectedIds(new Set(ids.filter((id) => !okIds.includes(id))));
+    } finally {
+      setBatchWorking(null);
+      setConfirmBatchDelete(false);
+    }
+  }
+
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
     router.replace('/login');
@@ -216,6 +285,21 @@ export default function DashboardPage() {
         <h2 className="text-[13px] font-semibold uppercase tracking-wide text-label-secondary">
           Berichts-Archiv {loading ? '' : `(${filteredReports.length})`}
         </h2>
+        <div className="flex items-center gap-3">
+          {selectMode && (
+            <button
+              onClick={() => setSelectedIds(new Set(filteredReports.map((r) => r.id)))}
+              className="text-[13px] font-medium text-ios-blue"
+            >
+              Alle
+            </button>
+          )}
+          {!loading && filteredReports.length > 0 && (
+            <button onClick={toggleSelectMode} className="text-[13px] font-medium text-ios-blue">
+              {selectMode ? 'Abbrechen' : 'Auswählen'}
+            </button>
+          )}
+        </div>
       </div>
       <div className="px-4 pt-2">
         <div className="ios-segment">
@@ -233,7 +317,7 @@ export default function DashboardPage() {
         ) : filteredReports.length === 0 ? (
           <p className="py-10 text-center text-[13px] text-label-secondary">Keine Berichte in dieser Ansicht.</p>
         ) : (
-          <div className="ios-group">
+          <div className={`ios-group ${selectMode ? 'mb-24' : ''}`}>
             {filteredReports.map((r) => (
               <ReportRow
                 key={r.id}
@@ -241,11 +325,46 @@ export default function DashboardPage() {
                 isPending={pendingWeeks.has(r.id)}
                 onDelete={handleDeleteReport}
                 onMarkDone={handleMarkDone}
+                selectMode={selectMode}
+                selected={selectedIds.has(r.id)}
+                onToggleSelect={toggleSelected}
               />
             ))}
           </div>
         )}
       </div>
+
+      {selectMode && (
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-separator bg-surface/95 px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur">
+          <div className="mx-auto flex max-w-md items-center gap-2">
+            <span className="min-w-[86px] text-[13px] font-medium text-label-secondary">
+              {selectedIds.size} ausgewählt
+            </span>
+            <button
+              onClick={handleBatchDone}
+              disabled={selectedIds.size === 0 || batchWorking !== null}
+              className="ios-btn-tinted flex-1 !py-2.5 text-[14px] disabled:opacity-40"
+            >
+              {batchWorking === 'done' ? <span className="ios-spinner" /> : 'Erledigt'}
+            </button>
+            <button
+              onClick={handleBatchDelete}
+              disabled={selectedIds.size === 0 || batchWorking !== null}
+              className={`flex-1 !py-2.5 text-[14px] disabled:opacity-40 ${
+                confirmBatchDelete ? 'ios-btn-filled-red' : 'ios-btn-tinted-red'
+              }`}
+            >
+              {batchWorking === 'delete' ? (
+                <span className="ios-spinner" />
+              ) : confirmBatchDelete ? (
+                'Wirklich löschen?'
+              ) : (
+                'Löschen'
+              )}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

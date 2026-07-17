@@ -27,11 +27,17 @@ export function ReportRow({
   isPending,
   onDelete,
   onMarkDone,
+  selectMode = false,
+  selected = false,
+  onToggleSelect,
 }: {
   report: Report;
   isPending: boolean;
   onDelete?: (id: string) => Promise<void>;
   onMarkDone?: (id: string) => Promise<void>;
+  selectMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }) {
   const { label, tone } = describeStatus(report, isPending);
   const [confirming, setConfirming] = useState(false);
@@ -78,11 +84,22 @@ export function ReportRow({
     if (report.content.workActivities?.trim()) tags.push('Betrieb');
   }
 
-  return (
-    <Link href={`/report/${encodeURIComponent(report.id)}`} className="ios-row ios-row-active ios-card-press">
-      <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[11px] bg-surface-tertiary text-label-secondary">
-        <IconDocument size={20} />
-      </div>
+  const rowInner = (
+    <>
+      {selectMode ? (
+        <span
+          className={`flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+            selected ? 'border-ios-blue bg-ios-blue text-white' : 'border-label/25 bg-transparent text-transparent'
+          }`}
+          aria-hidden
+        >
+          <IconCheck size={12} />
+        </span>
+      ) : (
+        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[11px] bg-surface-tertiary text-label-secondary">
+          <IconDocument size={20} />
+        </div>
+      )}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate text-[15px] font-semibold">{report.dateLabel || `Woche ${report.id}`}</span>
@@ -96,7 +113,7 @@ export function ReportRow({
           )}
         </div>
       </div>
-      {onMarkDone && report.status !== 'success' && (
+      {!selectMode && onMarkDone && report.status !== 'success' && (
         <button
           onClick={handleMarkDone}
           aria-label={`Bericht ${report.dateLabel || report.id} als erledigt markieren`}
@@ -106,7 +123,7 @@ export function ReportRow({
           {markingDone ? <span className="ios-spinner" /> : <IconCheck size={13} />}
         </button>
       )}
-      {onDelete && (
+      {!selectMode && onDelete && (
         <button
           onClick={handleDelete}
           aria-label={confirming ? 'Löschen bestätigen' : `Bericht ${report.dateLabel || report.id} löschen`}
@@ -119,7 +136,27 @@ export function ReportRow({
           {deleting ? <span className="ios-spinner !border-white/40 !border-t-white" /> : confirming ? 'Sicher?' : <IconX size={13} />}
         </button>
       )}
-      <IconChevron className="flex-shrink-0 text-label-secondary" />
+      {!selectMode && <IconChevron className="flex-shrink-0 text-label-secondary" />}
+    </>
+  );
+
+  if (selectMode) {
+    return (
+      <button
+        type="button"
+        onClick={() => onToggleSelect?.(report.id)}
+        aria-pressed={selected}
+        aria-label={`Bericht ${report.dateLabel || report.id} ${selected ? 'abwählen' : 'auswählen'}`}
+        className="ios-row ios-row-active w-full text-left"
+      >
+        {rowInner}
+      </button>
+    );
+  }
+
+  return (
+    <Link href={`/report/${encodeURIComponent(report.id)}`} className="ios-row ios-row-active ios-card-press">
+      {rowInner}
     </Link>
   );
 }
