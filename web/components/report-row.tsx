@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Report, SCHOOL_FIELDS } from '@/lib/types';
-import { IconChevron, IconDocument, IconX } from './icons';
+import { IconCheck, IconChevron, IconDocument, IconX } from './icons';
 
 function describeStatus(report: Report, isPending: boolean) {
   if (isPending) return { label: 'Genehmigung ausstehend', tone: 'orange' as const };
@@ -26,14 +26,30 @@ export function ReportRow({
   report,
   isPending,
   onDelete,
+  onMarkDone,
 }: {
   report: Report;
   isPending: boolean;
   onDelete?: (id: string) => Promise<void>;
+  onMarkDone?: (id: string) => Promise<void>;
 }) {
   const { label, tone } = describeStatus(report, isPending);
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [markingDone, setMarkingDone] = useState(false);
+
+  async function handleMarkDone(e: React.MouseEvent) {
+    // Klick darf nicht zusätzlich den Bericht öffnen (Zeile ist ein Link).
+    e.preventDefault();
+    e.stopPropagation();
+    if (!onMarkDone) return;
+    setMarkingDone(true);
+    try {
+      await onMarkDone(report.id);
+    } finally {
+      setMarkingDone(false);
+    }
+  }
 
   async function handleDelete(e: React.MouseEvent) {
     // Klick darf nicht zusätzlich den Bericht öffnen (Zeile ist ein Link).
@@ -80,6 +96,16 @@ export function ReportRow({
           )}
         </div>
       </div>
+      {onMarkDone && report.status !== 'success' && (
+        <button
+          onClick={handleMarkDone}
+          aria-label={`Bericht ${report.dateLabel || report.id} als erledigt markieren`}
+          title="Als erledigt markieren"
+          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-ios-green/15 text-ios-green transition-colors"
+        >
+          {markingDone ? <span className="ios-spinner" /> : <IconCheck size={13} />}
+        </button>
+      )}
       {onDelete && (
         <button
           onClick={handleDelete}

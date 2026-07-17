@@ -43,6 +43,7 @@ export default function ReportDetailPage() {
   const [aiSchoolLoading, setAiSchoolLoading] = useState(false);
   const [aiWorkLoading, setAiWorkLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [markingDone, setMarkingDone] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -175,6 +176,23 @@ export default function ReportDetailPage() {
     }
   }
 
+  async function toggleDone() {
+    const nextStatus = report?.status === 'success' ? 'waiting' : 'success';
+    setMarkingDone(true);
+    try {
+      await apiFetch(`/api/reports/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      setReport((r) => (r ? { ...r, status: nextStatus } : r));
+      toast(nextStatus === 'success' ? 'Bericht als erledigt markiert.' : 'Bericht wieder in Bearbeitung.', 'success');
+    } catch (err) {
+      toast((err as Error).message, 'error');
+    } finally {
+      setMarkingDone(false);
+    }
+  }
+
   async function handleDelete() {
     if (!confirmDelete) {
       setConfirmDelete(true);
@@ -291,6 +309,13 @@ export default function ReportDetailPage() {
         <button onClick={upload} disabled={uploading} className="ios-btn-filled-green w-full py-3.5 text-[16px]">
           {uploading ? <span className="ios-spinner !border-black/30 !border-t-black" /> : <IconUpload />}
           IHK Upload starten
+        </button>
+      </div>
+
+      <div className="px-4 pt-3">
+        <button onClick={toggleDone} disabled={markingDone} className="ios-btn-tinted w-full">
+          {markingDone ? <span className="ios-spinner" /> : <IconCheck size={14} />}
+          {report?.status === 'success' ? 'Als nicht erledigt markieren' : 'Als erledigt markieren'}
         </button>
       </div>
 

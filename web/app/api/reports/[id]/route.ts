@@ -14,12 +14,20 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   }
 }
 
+// Manuell über die UI setzbare Status-Werte; 'running'/'failed' bleiben der Automatisierung vorbehalten.
+const MANUAL_STATUSES = ['success', 'waiting'] as const;
+
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const body = await req.json().catch(() => null);
     const content = body?.content as ReportContent | undefined;
-    if (!content || typeof content !== 'object') {
-      return NextResponse.json({ error: 'content ist erforderlich.' }, { status: 400 });
+    const status = body?.status as string | undefined;
+    const hasContent = Boolean(content && typeof content === 'object');
+    if (!hasContent && status === undefined) {
+      return NextResponse.json({ error: 'content oder status ist erforderlich.' }, { status: 400 });
+    }
+    if (status !== undefined && !MANUAL_STATUSES.includes(status as (typeof MANUAL_STATUSES)[number])) {
+      return NextResponse.json({ error: 'Ungültiger status.' }, { status: 400 });
     }
 
     const id = encodeURIComponent(params.id);
@@ -29,15 +37,21 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     // Nur bekannte Felder übernehmen; Multi-Path-Update, damit fremde Keys
     // unter content (z.B. vom Scraper) erhalten bleiben.
     const update: Record<string, unknown> = { updatedAt: new Date().toISOString() };
-    for (const field of SCHOOL_FIELDS) {
-      if (typeof content[field] === 'string') update[`content/${field}`] = content[field];
+    if (status !== undefined) {
+      update['status'] = status;
+      update['message'] = status === 'success' ? 'Manuell als erledigt markiert.' : 'Manuell auf "In Bearbeitung" gesetzt.';
     }
-    if (typeof content.workActivities === 'string') update['content/workActivities'] = content.workActivities;
-    if (content.sickDays && typeof content.sickDays === 'object') {
-      update['content/sickDays'] = {
-        montag: Boolean(content.sickDays.montag),
-        freitag: Boolean(content.sickDays.freitag),
-      };
+    if (hasContent && content) {
+      for (const field of SCHOOL_FIELDS) {
+        if (typeof content[field] === 'string') update[`content/${field}`] = content[field];
+      }
+      if (typeof content.workActivities === 'string') update['content/workActivities'] = content.workActivities;
+      if (content.sickDays && typeof content.sickDays === 'object') {
+        update['content/sickDays'] = {
+          montag: Boolean(content.sickDays.montag),
+          freitag: Boolean(content.sickDays.freitag),
+        };
+      }
     }
 
     await firebasePatch(`reports/${id}`, update);

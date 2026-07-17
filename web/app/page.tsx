@@ -120,6 +120,19 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleMarkDone(id: string) {
+    try {
+      await apiFetch(`/api/reports/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'success' }),
+      });
+      setReports((rs) => rs.map((r) => (r.id === id ? { ...r, status: 'success' } : r)));
+      toast('Bericht als erledigt markiert.', 'success');
+    } catch (err) {
+      toast((err as Error).message, 'error');
+    }
+  }
+
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
     router.replace('/login');
@@ -222,7 +235,13 @@ export default function DashboardPage() {
         ) : (
           <div className="ios-group">
             {filteredReports.map((r) => (
-              <ReportRow key={r.id} report={r} isPending={pendingWeeks.has(r.id)} onDelete={handleDeleteReport} />
+              <ReportRow
+                key={r.id}
+                report={r}
+                isPending={pendingWeeks.has(r.id)}
+                onDelete={handleDeleteReport}
+                onMarkDone={handleMarkDone}
+              />
             ))}
           </div>
         )}
