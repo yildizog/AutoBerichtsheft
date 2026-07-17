@@ -76,6 +76,17 @@ export async function dispatchScrapeWorkflow(targetDate?: string): Promise<void>
   if (!res.ok) throw new Error(`Scrape-Workflow konnte nicht gestartet werden: ${res.status} ${await res.text()}`);
 }
 
+export async function dispatchDailyCheckWorkflow(): Promise<void> {
+  const { token, owner, repo, configured } = getConfig();
+  if (!configured) throw new Error('GitHub ist nicht konfiguriert (GITHUB_TOKEN/GITHUB_USER/GITHUB_REPO fehlen).');
+
+  const res = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/actions/workflows/daily_status_check.yml/dispatches`,
+    { method: 'POST', headers: headers(token), body: JSON.stringify({ ref: 'master' }) }
+  );
+  if (!res.ok) throw new Error(`Daily-Check-Workflow konnte nicht gestartet werden: ${res.status} ${await res.text()}`);
+}
+
 export async function dispatchUploadWorkflow(reportId: string, content: unknown): Promise<void> {
   const { token, owner, repo, configured } = getConfig();
   if (!configured) throw new Error('GitHub ist nicht konfiguriert (GITHUB_TOKEN/GITHUB_USER/GITHUB_REPO fehlen).');

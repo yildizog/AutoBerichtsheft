@@ -25,6 +25,7 @@ export default function DashboardPage() {
   const [filter, setFilter] = useState<Filter>('all');
   const [scrapeDate, setScrapeDate] = useState('');
   const [scraping, setScraping] = useState(false);
+  const [checking, setChecking] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchWorking, setBatchWorking] = useState<'done' | 'delete' | null>(null);
@@ -193,6 +194,23 @@ export default function DashboardPage() {
     }
   }
 
+  async function handleDailyCheck() {
+    setChecking(true);
+    try {
+      await apiFetch('/api/actions/daily-check', { method: 'POST' });
+      toast('Daily Check gestartet.', 'success');
+      setTimeout(() => {
+        loadRuns();
+        loadStatus();
+        loadReports();
+      }, 1500);
+    } catch (err) {
+      toast((err as Error).message, 'error');
+    } finally {
+      setChecking(false);
+    }
+  }
+
   async function handleLogout() {
     await fetch('/api/auth/logout', { method: 'POST' });
     router.replace('/login');
@@ -207,15 +225,12 @@ export default function DashboardPage() {
             <h1 className="text-[28px] font-bold tracking-tight">Berichtsheft</h1>
             <div className="flex items-center gap-1">
               <button
-                onClick={() => {
-                  loadRuns();
-                  loadStatus();
-                  loadReports();
-                }}
-                className="flex h-9 w-9 items-center justify-center rounded-full text-ios-blue active:bg-label/10"
-                aria-label="Aktualisieren"
+                onClick={handleDailyCheck}
+                disabled={checking}
+                className="flex h-9 w-9 items-center justify-center rounded-full text-ios-blue active:bg-label/10 disabled:opacity-40"
+                aria-label="Daily Check starten"
               >
-                <IconRefresh size={18} />
+                {checking ? <span className="ios-spinner" /> : <IconRefresh size={18} />}
               </button>
               <button
                 onClick={handleLogout}

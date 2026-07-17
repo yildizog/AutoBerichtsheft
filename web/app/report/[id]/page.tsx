@@ -11,6 +11,9 @@ import { useToast } from '@/components/providers';
 
 type SubjectField = { id: SchoolField; label: string; placeholder: string; chip: string };
 
+// Wert, der bei ausgefallenem Unterricht als Eintrag gespeichert/hochgeladen wird.
+const ENTFALL_TEXT = 'Entfall';
+
 const MONTAG_FIELDS: SubjectField[] = [
   { id: 'stdm', label: 'STDM', placeholder: 'Softwaretechnologie und Datenmanagement…', chip: 'bg-ios-blue/15 text-ios-blue' },
   { id: 'evp', label: 'EVP', placeholder: 'Entwicklung Vernetzter Prozesse…', chip: 'bg-ios-indigo/15 text-ios-indigo' },
@@ -50,6 +53,10 @@ export default function ReportDetailPage() {
   const [deleting, setDeleting] = useState(false);
 
   const [saveState, setSaveState] = useState<'idle' | 'dirty' | 'saving' | 'saved' | 'error'>('idle');
+  // Nach fehlgeschlagenem Upload-Versuch leere Fächer rot hervorheben.
+  const [highlightMissing, setHighlightMissing] = useState(false);
+  // Warndialog vor dem Upload, wenn Fächer leer sind (null = kein Dialog offen).
+  const [missingWarning, setMissingWarning] = useState<string[] | null>(null);
   const loadedRef = useRef(false);
   const skipNextSaveRef = useRef(false);
 
@@ -147,6 +154,7 @@ export default function ReportDetailPage() {
   async function refineSchool() {
     const ids = (Object.keys(selected) as SchoolField[]).filter((k) => {
       if (!selected[k]) return false;
+      if (fields[k].trim() === ENTFALL_TEXT) return false;
       if (absences.montag && ['stdm', 'evp', 'sport'].includes(k)) return false;
       if (absences.freitag && ['wbl', 'englisch', 'deutsch', 'dkrypt'].includes(k)) return false;
       return true;
@@ -188,7 +196,30 @@ export default function ReportDetailPage() {
     }
   }
 
-  async function upload() {
+  // Leere Fächer an Tagen ohne Abwesenheit ermitteln (Entfall zählt als ausgefüllt).
+  function getMissingSubjects(): string[] {
+    const missing: string[] = [];
+    if (!absences.montag) {
+      MONTAG_FIELDS.forEach((f) => { if (!fields[f.id].trim()) missing.push(`${f.label} (Montag)`); });
+    }
+    if (!absences.freitag) {
+      FREITAG_FIELDS.forEach((f) => { if (!fields[f.id].trim()) missing.push(`${f.label} (Freitag)`); });
+    }
+    return missing;
+  }
+
+  function upload() {
+    const missing = getMissingSubjects();
+    if (missing.length) {
+      // Upload stoppen: Warnung muss erst aktiv weggedrückt werden.
+      setHighlightMissing(true);
+      setMissingWarning(missing);
+      return;
+    }
+    void doUpload();
+  }
+
+  async function doUpload() {
     setUploading(true);
     try {
       // Vor dem Upload den Stand in Firebase sichern, damit DB und IHK synchron sind.
@@ -283,6 +314,7 @@ export default function ReportDetailPage() {
         subjectFields={MONTAG_FIELDS}
         values={fields}
         selected={selected}
+        highlightMissing={highlightMissing}
         onChangeValue={(k, v) => setFields((f) => ({ ...f, [k]: v }))}
         onToggleSelected={(k) => setSelected((s) => ({ ...s, [k]: !s[k] }))}
       />
@@ -294,6 +326,7 @@ export default function ReportDetailPage() {
         subjectFields={FREITAG_FIELDS}
         values={fields}
         selected={selected}
+        highlightMissing={highlightMissing}
         onChangeValue={(k, v) => setFields((f) => ({ ...f, [k]: v }))}
         onToggleSelected={(k) => setSelected((s) => ({ ...s, [k]: !s[k] }))}
       />
@@ -364,6 +397,43 @@ export default function ReportDetailPage() {
           Erledigte Berichte werden nach 7 Tagen automatisch entfernt.
         </p>
       </div>
+
+      {missingWarning && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6"
+          role="alertdialog"
+          aria-modal="true"
+          aria-label="Fächer unvollständig"
+          onClick={() => setMissingWarning(null)}
+        >
+          <div className="ios-group w-full max-w-sm !mx-0 p-5" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-[17px] font-bold tracking-tight">Fächer unvollständig</h3>
+            <p className="mt-2 text-[14px] leading-relaxed text-label-secondary">
+              Folgende Fächer sind noch leer. Fülle sie aus oder markiere sie als „{ENTFALL_TEXT}“ – im Bericht bleiben
+              diese Einträge sonst leer:
+            </p>
+            <ul className="mt-2 list-disc pl-5 text-[14px] font-medium text-ios-red">
+              {missingWarning.map((m) => (
+                <li key={m}>{m}</li>
+              ))}
+            </ul>
+            <div className="mt-5 flex flex-col gap-2">
+              <button onClick={() => setMissingWarning(null)} className="ios-btn-tinted w-full">
+                Abbrechen und ausfüllen
+              </button>
+              <button
+                onClick={() => {
+                  setMissingWarning(null);
+                  void doUpload();
+                }}
+                className="ios-btn-tinted-red w-full"
+              >
+                Trotzdem hochladen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -376,6 +446,7 @@ function DaySection({
   subjectFields,
   values,
   selected,
+  highlightMissing,
   onChangeValue,
   onToggleSelected,
 }: {
@@ -386,6 +457,7 @@ function DaySection({
   subjectFields: SubjectField[];
   values: Record<SchoolField, string>;
   selected: Record<SchoolField, boolean>;
+  highlightMissing: boolean;
   onChangeValue: (id: SchoolField, value: string) => void;
   onToggleSelected: (id: SchoolField) => void;
 }) {
@@ -443,6 +515,8 @@ function DaySection({
       ) : (
         subjectFields.map((f) => {
           const filled = Boolean(values[f.id].trim());
+          const isEntfall = values[f.id].trim() === ENTFALL_TEXT;
+          const missing = highlightMissing && !filled;
           return (
             <div key={f.id} className="border-b border-separator px-3.5 py-3 last:border-b-0">
               <div className="mb-2 flex items-center justify-between gap-3">
@@ -457,16 +531,42 @@ function DaySection({
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-medium text-label-secondary">KI-Korrektur</span>
-                  <Switch on={selected[f.id]} onToggle={() => onToggleSelected(f.id)} label={`${f.label} für KI-Korrektur einbeziehen`} />
+                  <button
+                    onClick={() => onChangeValue(f.id, isEntfall ? '' : ENTFALL_TEXT)}
+                    className={`ios-btn !px-2.5 !py-1.5 text-[12px] ${
+                      isEntfall ? 'bg-ios-green text-black' : 'bg-surface-tertiary text-label-secondary'
+                    }`}
+                  >
+                    Entfall
+                  </button>
+                  {!isEntfall && (
+                    <>
+                      <span className="text-[11px] font-medium text-label-secondary">KI-Korrektur</span>
+                      <Switch on={selected[f.id]} onToggle={() => onToggleSelected(f.id)} label={`${f.label} für KI-Korrektur einbeziehen`} />
+                    </>
+                  )}
                 </div>
               </div>
-              <textarea
-                className="ios-textarea min-h-[90px]"
-                placeholder={f.placeholder}
-                value={values[f.id]}
-                onChange={(e) => onChangeValue(f.id, e.target.value)}
-              />
+              {isEntfall ? (
+                <div className="flex items-center gap-2.5 text-[13px] text-label-secondary">
+                  <IconX size={14} className="flex-shrink-0 text-ios-green" />
+                  Unterricht entfallen – im Bericht wird „{ENTFALL_TEXT}“ eingetragen.
+                </div>
+              ) : (
+                <>
+                  <textarea
+                    className={`ios-textarea min-h-[90px] ${missing ? '!border-ios-red focus:!ring-ios-red/40' : ''}`}
+                    placeholder={f.placeholder}
+                    value={values[f.id]}
+                    onChange={(e) => onChangeValue(f.id, e.target.value)}
+                  />
+                  {missing && (
+                    <p className="mt-1.5 text-[12px] font-medium text-ios-red">
+                      Bitte ausfüllen oder als „Entfall“ markieren.
+                    </p>
+                  )}
+                </>
+              )}
             </div>
           );
         })
